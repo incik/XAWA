@@ -76,7 +76,7 @@ class Plugin(plugins.PluginBase):
     def pushButtonClicked(self):
         try:
             #novaUrl = 'http://eudora.incik.cz/xawa/tstapp01.html'
-            novaUrl = 'file:///home/incik/projects/XAWA/apps/tstapp01.html'
+            novaUrl = 'file:///var/www/xawa/tstapp01.html'
             if novaUrl != '':                
                 self.window.ui.webView.load(QtCore.QUrl(novaUrl))
             
