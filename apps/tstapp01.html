@@ -1,0 +1,47 @@
+<html>
+<head>
+	<title>Test App 1</title>
+	<style type="text/css">
+		body {
+			font-size: 13px;
+		}
+		#errDiv {
+			border: 1px solid #d50000;
+			padding: 5px 10px;
+			color: #d50000;
+		}
+		#errDiv p {
+			margin: 0;
+			padding: 0;
+		}
+		#goodResult {
+			border: 1px solid #00d500;
+			padding: 5px 10px;
+			color: #00d500;
+		}
+	</style>
+	<script type="text/javascript">
+		function foo() {
+			try {
+				var goodResult = document.getElementById('goodResult');
+				goodResult.removeAttribute('style');
+				goodResult.innerHTML = PyLittleClass;
+				goodResult.innerHTML += "<p><strong>Python object method call test</strong><br/>PyLittleClass.scitej(1,2) = " + PyLittleClass.scitej(1,2) + "</p>";
+			}
+			catch(err) {
+				var errDiv = document.getElementById('errDiv');
+				errDiv.removeAttribute('style');
+				errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
+			}
+		}
+	</script>
+</head>
+<body onLoad="foo();">
+	<h1>Test App 1</h1>
+	<p>Lorem ipsum dolor sit amet domatavus vestum motabilus</p>
+	<div id="goodResult" style="display: none;"></div>
+	<div id="errDiv" style="display: none;"></div>
+	<hr />
+	<p><small>&copy; incik</small></p>
+</body>
+</html>
