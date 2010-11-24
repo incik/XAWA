@@ -17,10 +17,16 @@
 		#goodResult {
 			border: 1px solid #00d500;
 			padding: 5px 10px;
-			color: #00d500;
+			color: #00a500;
 		}
 	</style>
 	<script type="text/javascript">
+		function showError(err) {
+			var errDiv = document.getElementById('errDiv');
+			errDiv.removeAttribute('style');
+			errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
+		}
+
 		function foo() {
 			try {
 				var goodResult = document.getElementById('goodResult');
@@ -29,10 +35,19 @@
 				goodResult.innerHTML += "<p><strong>Python object method call test</strong><br/>PyLittleClass.scitej(1,2) = " + PyLittleClass.scitej(1,2) + "</p>";
 			}
 			catch(err) {
-				var errDiv = document.getElementById('errDiv');
-				errDiv.removeAttribute('style');
-				errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
+				showError(err);
 			}
+		}
+
+		function boo() {
+			try {
+				//alert(PyLittleClass.printInfo());
+				alert(PyLittleClass.sendDummyMessage());
+			}
+			catch(err) {
+				showError(err);
+			}
+			return false;
 		}
 	</script>
 </head>
@@ -41,6 +56,8 @@
 	<p>Lorem ipsum dolor sit amet domatavus vestum motabilus</p>
 	<div id="goodResult" style="display: none;"></div>
 	<div id="errDiv" style="display: none;"></div>
+	<hr />
+	<input type="submit" value="show info" onClick="javascript: boo();" />
 	<hr />
 	<p><small>&copy; incik</small></p>
 </body>
