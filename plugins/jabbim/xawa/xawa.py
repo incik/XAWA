@@ -18,6 +18,7 @@ class LittleClass(QtCore.QObject):
     def __init__(self,parent):
         QtCore.QObject.__init__(self,parent.window)
         self.setObjectName('ObjectAddedByPython')
+        self.rodic = parent
         
     @QtCore.pyqtSlot(int, int, result=int)
     def scitej(self,a,b):
@@ -25,7 +26,7 @@ class LittleClass(QtCore.QObject):
     
     @QtCore.pyqtSlot(result=str)
     def printInfo(self):
-        return 'XAWA version 0.1' 
+        return self.rodic.sendMessage('ahoj')
     
     @QtCore.pyqtSlot(result=str)
     def sendDummyMessage(self):
@@ -134,6 +135,7 @@ class Plugin(plugins.PluginBase):
     def sendMessage(self,message):
             
         #iq = IQ(self.parent().main.client.xmlstream, 'set')
+        '''
         result = 'ok'
         try:
             message = Element((None,'message'))
@@ -145,6 +147,7 @@ class Plugin(plugins.PluginBase):
             result = 'jo'
         except Exception, ex:
             result = ex;
-    
-        return result
+        '''
+        
+        return message
     

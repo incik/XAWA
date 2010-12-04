@@ -1,0 +1,13 @@
+<xs:schema
+	xmlns:xs='http://www.w3.org/2001/XMLSchema'
+	targetNamespace='http://xawa.vaisar.cz/protocol/xawa'
+	xmlns='http://xawa.vaisar.cz/protocol/xawa'
+	emelentFormDefault='qualified'>
+
+	<xs:annotation>
+		<xs:documentation>
+			
+		</xs:documentation>
+	</xs:annotation>
+
+</xs:schema>
