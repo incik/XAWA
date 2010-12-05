@@ -13,25 +13,46 @@ from urllib import quote, unquote
 from twisted.python import log
 from twisted.words.protocols.jabber.xmlstream import IQ
 from twisted.words.xish.domish import Element
+from pyxl.message import Message
 
-class LittleClass(QtCore.QObject):  
+'''
+    Static class witch works as a proxy for calling XAWA plugin methods from JavaScript.
+'''
+class xawa(QtCore.QObject):
     def __init__(self,parent):
         QtCore.QObject.__init__(self,parent.window)
-        self.setObjectName('ObjectAddedByPython')
+        self.setObjectName('XAWAPluginHandler')
         self.rodic = parent
+    
+    @QtCore.pyqtSlot()
+    def init(self):
+        '''
+            Dummy method (so far) that's called to determine if the browser even supports XAWA callings
+            (we need to fail init in case that someone opens application page in normal browser) 
+        '''
+        pass
+    
+    @QtCore.pyqtSlot(result=str)
+    def getXawaVersion(self):
+        '''
+            Returns 
+        '''
+        return "0.1a"
+    
+    @QtCore.pyqtSlot(result=str)
+    def getRecipient(self):
+        '''
+            Returns JID of recipient
+        '''
+        return self.rodic.recipient
         
-    @QtCore.pyqtSlot(int, int, result=int)
-    def scitej(self,a,b):
-        return a+b
-    
-    @QtCore.pyqtSlot(result=str)
-    def printInfo(self):
-        return self.rodic.sendMessage('ahoj')
-    
-    @QtCore.pyqtSlot(result=str)
-    def sendDummyMessage(self):
-        #iq = IQ(self.parent().main.client.xmlstream, 'set')    
-        return self.parent.sendMessage('ahoj')
+    @QtCore.pyqtSlot(str)
+    def sendMessage(self,message):
+        '''
+            Sending plain text messages
+        '''
+        self.rodic.sendMessage(str(message)) # message is 'QString', so we need to convert it into regular string 
+
     
 class config:
     def __init__(self,main):
@@ -73,7 +94,7 @@ class Plugin(plugins.PluginBase):
            
         else:
             self.loadConfig(homedir)
-            
+           
     def on_authd(self):
         try:
             self.registerFeature("http://xawa.vaisar.cz/protocol/xawa")
@@ -81,19 +102,26 @@ class Plugin(plugins.PluginBase):
             raise ex
             
                         
+    
+    
+    
     def buildMainWindowMenu(self):
         menu=self.mainWindowMenu()
         menu.addAction("Open XAWA Window", self.openWindow);
+    
     
     def buildContactMenu(self,menu,contact):
         jid = unicode(contact.jid)
         
         if self.main.client.hasFeature(jid,"http://xawa.vaisar.cz/protocol/xawa"):
-            # wheee, nekdo pouziva nasi feature!
+            # wheee, someone is using our feature!
             
             self.action = menu.addAction(self.tr("Open XAWA window"))
             self.action.setData(QtCore.QVariant(jid))
             self.action.setObjectName("xawa_menu_button")
+            
+            # tohle je prasecina, ale zatim nevim, jak predat argument do slotu
+            self.recipient = jid # now we know who we're going to communicate with, so we save this information
 
             QtCore.QObject.connect(self.action,QtCore.SIGNAL("triggered ( bool )"),self.openWindow)
     
@@ -107,18 +135,20 @@ class Plugin(plugins.PluginBase):
             log.logerr(ex)
             
     def pushButtonClicked(self):
+        self.loadApp()
+        
+    def loadApp(self):
         try:
-            #novaUrl = 'http://eudora.incik.cz/xawa/tstapp01.html'
-            novaUrl = 'file:///var/www/xawa/tstapp01.html'
-            if novaUrl != '':                
-                self.window.ui.webView.load(QtCore.QUrl(novaUrl))
+            appUrl = 'file:///var/www/xawa/tstapp01.html'
+            if appUrl != '':                
+                self.window.ui.webView.load(QtCore.QUrl(appUrl))
             
         except Exception, ex:
-            log.logerr(ex)
+            raise ex
     
     def initJavascript(self):
         try:
-            self.window.ui.webView.page().mainFrame().addToJavaScriptWindowObject('PyLittleClass',LittleClass(self))
+            self.window.ui.webView.page().mainFrame().addToJavaScriptWindowObject('xawa',xawa(self))
         except Exception,ex:
             raise ex
             
@@ -127,27 +157,23 @@ class Plugin(plugins.PluginBase):
             novyTitle = self.window.ui.webView.title()
             self.window.setWindowTitle(novyTitle)
 
-        except Exception, ax:
-            raise ax
+        except Exception, ex:
+            raise ex
         
 
             
     def sendMessage(self,message):
-            
-        #iq = IQ(self.parent().main.client.xmlstream, 'set')
         '''
-        result = 'ok'
+            sends plain text message to recipient with JID saved in self.recipient
+        '''
+        m = Message(self.recipient)
+        m.setBody(message)
+        m.setComposing("active")
         try:
-            message = Element((None,'message'))
-            message['from'] = 'johntestovic@jabbim.cz/Jabbim'
-            message['to'] = 'incik@jabbim.cz/Lenicka'
-            body = message.addElement('body', None, 'Zdar!')
-         
-            self.main.client.xmlstream.send(message)
-            result = 'jo'
+            self.main.client.message.sendMessage(msg=m)
         except Exception, ex:
-            result = ex;
-        '''
+            raise ex
+        
         
         return message
     

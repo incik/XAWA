@@ -27,38 +27,65 @@
 			errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
 		}
 
+		function init() {
+			try {
+				xawa.init();
+				// show recipient JID
+				document.getElementById('recipientJID').innerHTML = "<strong>" + xawa.getRecipient() + "</strong>";
+			}
+			catch(err) {
+				showError(err);
+				// if init() fails, there's no reason to continue
+				window.stop();
+			}
+		}
+
 		function foo() {
 			try {
 				var goodResult = document.getElementById('goodResult');
 				goodResult.removeAttribute('style');
-				goodResult.innerHTML = PyLittleClass;
-				goodResult.innerHTML += "<p><strong>Python object method call test</strong><br/>PyLittleClass.scitej(1,2) = " + PyLittleClass.scitej(1,2) + "</p>";
+				goodResult.innerHTML = xawa;
+				goodResult.innerHTML += "<p><strong>Python object method call test</strong><br/>xawa.getXawaVersion() = " + xawa.getXawaVersion() + "</p>";
 			}
 			catch(err) {
 				showError(err);
 			}
+
+			return false;
 		}
 
-		function boo() {
+		function sendMessage() {
 			try {
-				//alert(PyLittleClass.printInfo());
-				alert(PyLittleClass.sendDummyMessage());
+				var message = document.getElementById('messagebox').value;
+				xawa.sendMessage(message);
 			}
 			catch(err) {
 				showError(err);
 			}
+
 			return false;
 		}
 	</script>
 </head>
-<body onLoad="foo();">
+<body onLoad="init();">
 	<h1>Test App 1</h1>
-	<p>Lorem ipsum dolor sit amet domatavus vestum motabilus</p>
+	<div id="xawaInfo">
+		Recipient: <span id="recipientJID"></span>
+	</div>
+
 	<div id="goodResult" style="display: none;"></div>
 	<div id="errDiv" style="display: none;"></div>
 	<hr />
-	<input type="submit" value="show info" onClick="javascript: boo();" />
+
+	<input type="submit" value="test xawa" onClick="javascript: foo();" />
 	<hr />
+
+	<h2>Send message</h2>
+	<table>
+		<tr><th></th><td><input type="text" id="messagebox" /></td></tr>
+		<tr><th></th><td><input type="submit" id="sendMessageButton" value="Send message!" onClick="javascript: sendMessage();" /></td></tr>
+	</table>
+
 	<p><small>&copy; incik</small></p>
 </body>
 </html>
