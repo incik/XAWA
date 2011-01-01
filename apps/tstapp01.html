@@ -19,7 +19,12 @@
 			padding: 5px 10px;
 			color: #00a500;
 		}
+		#chatarea {
+			width: 500px;
+			height: 150px;
+		}
 	</style>
+
 	<script type="text/javascript">
 		function showError(err) {
 			var errDiv = document.getElementById('errDiv');
@@ -27,11 +32,25 @@
 			errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
 		}
 
+		function getCurrentTime() {
+			var now = new Date();
+			return now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+		}
+
+		function addMessageToChat(from, message) {
+			var chatarea = document.getElementById('chatarea');
+			chatarea.value += '[' + getCurrentTime() + '] <' + from + '> ' + message + "\n";
+		}
+
 		function init() {
 			try {
 				xawa.init();
-				// show recipient JID
+				// register function for recieving data
+				setInterval('getData()',1);
+				// show recipient's JID
 				document.getElementById('recipientJID').innerHTML = "<strong>" + xawa.getRecipient() + "</strong>";
+				// show sender's JID
+				document.getElementById('senderJID').innerHTML = "<strong>" + xawa.getSender() + "</strong>";
 			}
 			catch(err) {
 				showError(err);
@@ -57,7 +76,12 @@
 		function sendMessage() {
 			try {
 				var message = document.getElementById('messagebox').value;
+
+				// send message via jabber
 				xawa.sendMessage(message);
+
+				// show sended message in the chatwindow
+				addMessageToChat(xawa.getSender(), message);
 			}
 			catch(err) {
 				showError(err);
@@ -65,12 +89,26 @@
 
 			return false;
 		}
+
+		function getData() {
+			try {
+				var result = xawa.getData();
+				if (xawa.isUnread() && result != 'None' && result != '') {
+					addMessageToChat(xawa.getRecipient(), result);
+					xawa.markAsRead();
+				}
+			}
+			catch(err) {
+				showError(err);
+			}
+		}
 	</script>
 </head>
 <body onLoad="init();">
 	<h1>Test App 1</h1>
 	<div id="xawaInfo">
-		Recipient: <span id="recipientJID"></span>
+		Recipient: <span id="recipientJID"></span><br />
+		Sender: <span id="senderJID"></span><br />
 	</div>
 
 	<div id="goodResult" style="display: none;"></div>
@@ -80,10 +118,10 @@
 	<input type="submit" value="test xawa" onClick="javascript: foo();" />
 	<hr />
 
-	<h2>Send message</h2>
+	<h2>Simple chat</h2>
+	<textarea id="chatarea"></textarea>
 	<table>
-		<tr><th></th><td><input type="text" id="messagebox" /></td></tr>
-		<tr><th></th><td><input type="submit" id="sendMessageButton" value="Send message!" onClick="javascript: sendMessage();" /></td></tr>
+		<tr><th>Message:</th><td><input type="text" id="messagebox" /></td><td><input type="submit" id="sendMessageButton" value="Send message!" onClick="javascript: sendMessage();" /></td></tr>
 	</table>
 
 	<p><small>&copy; incik</small></p>

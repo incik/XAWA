@@ -45,15 +45,44 @@ class xawa(QtCore.QObject):
             Returns JID of recipient
         '''
         return self.rodic.recipient
+    
+    @QtCore.pyqtSlot(result=str)
+    def getSender(self):
+        '''
+            Returns JID of sender
+        '''
+        return self.rodic.sender
         
     @QtCore.pyqtSlot(str)
     def sendMessage(self,message):
         '''
             Sending plain text messages
         '''
-        self.rodic.sendMessage(str(message)) # message is 'QString', so we need to convert it into regular string 
+        self.rodic.sendMessage(unicode(message)) # message is 'QString', so we need to convert it into regular UNICODE string 
 
+    @QtCore.pyqtSlot(result=str)
+    def getData(self):
+        '''
+            Returns reviced data (JSON)
+        '''
+        return self.rodic.recivedData
     
+    @QtCore.pyqtSlot()
+    def markAsRead(self):
+        '''
+            Sets 
+        '''
+        self.rodic.isUnread = False
+    
+    @QtCore.pyqtSlot(result=bool)    
+    def isUnread(self):
+        '''
+            Returns true/false if the message was already read
+        '''
+        return self.rodic.isUnread
+    
+    
+        
 class config:
     def __init__(self,main):
         self.main = main
@@ -76,7 +105,11 @@ class Plugin(plugins.PluginBase):
             self.loadConfig(homedir)
             self.loadConfig()
             
+            self.sender = 'xvaisa00@stud.fit.vutbr.cz'
+            
+            # registation of event handlers
             self.registerHandler('on_authd', self.on_authd)
+            self.registerHandler('on_message', self.on_message, 10)
             
             self.window = self.loadWindow("%s/xawaWindow_ui.py" % self.pluginDir, self.main)
             self.window.setWindowIcon(self.main.windowIcon())
@@ -101,21 +134,21 @@ class Plugin(plugins.PluginBase):
         except Exception, ex:
             raise ex
             
-                        
     
-    
-    
-    def buildMainWindowMenu(self):
+    def buildMainWindowMenu(self): 
         menu=self.mainWindowMenu()
         menu.addAction("Open XAWA Window", self.openWindow);
     
     
     def buildContactMenu(self,menu,contact):
+        '''
+            Adding "Open XAWA Window" into contact's context menu
+        '''
         jid = unicode(contact.jid)
         
         if self.main.client.hasFeature(jid,"http://xawa.vaisar.cz/protocol/xawa"):
             # wheee, someone is using our feature!
-            
+                
             self.action = menu.addAction(self.tr("Open XAWA window"))
             self.action.setData(QtCore.QVariant(jid))
             self.action.setObjectName("xawa_menu_button")
@@ -123,10 +156,18 @@ class Plugin(plugins.PluginBase):
             # tohle je prasecina, ale zatim nevim, jak predat argument do slotu
             self.recipient = jid # now we know who we're going to communicate with, so we save this information
 
+            # when the item is clicked, open xawa window
             QtCore.QObject.connect(self.action,QtCore.SIGNAL("triggered ( bool )"),self.openWindow)
     
     def on_message(self,msg):
-        pass
+        '''
+            Handling incomming message
+        '''
+        if (msg.body != None and msg.subject == 'xawa_data'):
+            self.recivedData = unicode(msg.body)
+            self.isUnread = True
+        else:
+            pass
     
     def openWindow(self):
         try:
@@ -168,6 +209,7 @@ class Plugin(plugins.PluginBase):
         '''
         m = Message(self.recipient)
         m.setBody(message)
+        m.setSubject(unicode('xawa_data'))
         m.setComposing("active")
         try:
             self.main.client.message.sendMessage(msg=m)
