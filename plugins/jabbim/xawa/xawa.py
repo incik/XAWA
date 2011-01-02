@@ -4,16 +4,17 @@ Created on 24.10.2010
 @author: incik
 '''
 
-import sys,os,time
-sys.path.append('.')
+#import sys,os,time
+#sys.path.append('.')
 from include import plugins
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtWebKit import QWebView
-from urllib import quote, unquote
+from PyQt4 import QtCore #, QtGui
+#from PyQt4.QtWebKit import QWebView
+#from urllib import quote, unquote
 from twisted.python import log
-from twisted.words.protocols.jabber.xmlstream import IQ
-from twisted.words.xish.domish import Element
+#from twisted.words.protocols.jabber.xmlstream import IQ
+#from twisted.words.xish.domish import Element
 from pyxl.message import Message
+from core import PluginManager
 
 '''
     Static class witch works as a proxy for calling XAWA plugin methods from JavaScript.
@@ -105,8 +106,6 @@ class Plugin(plugins.PluginBase):
             self.loadConfig(homedir)
             self.loadConfig()
             
-            self.sender = 'xvaisa00@stud.fit.vutbr.cz'
-            
             # registation of event handlers
             self.registerHandler('on_authd', self.on_authd)
             self.registerHandler('on_message', self.on_message, 10)
@@ -131,6 +130,11 @@ class Plugin(plugins.PluginBase):
     def on_authd(self):
         try:
             self.registerFeature("http://xawa.vaisar.cz/protocol/xawa")
+            
+            if (self.main.client != None):            
+                senderjid = self.main.client.jid 
+                self.sender = unicode(senderjid.user + '@' + senderjid.host)
+                
         except Exception, ex:
             raise ex
             
@@ -166,8 +170,8 @@ class Plugin(plugins.PluginBase):
         if (msg.body != None and msg.subject == 'xawa_data'):
             self.recivedData = unicode(msg.body)
             self.isUnread = True
-        else:
-            pass
+            msg = None
+            return True
     
     def openWindow(self):
         try:

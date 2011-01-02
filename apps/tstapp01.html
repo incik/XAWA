@@ -32,9 +32,16 @@
 			errDiv.innerHTML = "<p><strong>Exception:</strong> " + err + "</p>";
 		}
 
+		function formatTime(time) {
+			if (time < 10)
+				return '0' + time;
+			else
+				return time;
+		}
+
 		function getCurrentTime() {
 			var now = new Date();
-			return now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+			return formatTime(now.getHours()) + ':' + formatTime(now.getMinutes()) + ':' + formatTime(now.getSeconds());
 		}
 
 		function addMessageToChat(from, message) {
