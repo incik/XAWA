@@ -52,8 +52,8 @@
 		function init() {
 			try {
 				xawa.init();
-				// register function for recieving data
-				setInterval('getData()',1);
+				// register function for receiving messages
+				setInterval('getMessage()',1);
 				// show recipient's JID
 				document.getElementById('recipientJID').innerHTML = "<strong>" + xawa.getRecipient() + "</strong>";
 				// show sender's JID
@@ -97,12 +97,12 @@
 			return false;
 		}
 
-		function getData() {
+		function getMessage() {
 			try {
-				var result = xawa.getData();
-				if (xawa.isUnread() && result != 'None' && result != '') {
+				var result = xawa.getMessage();
+				if (xawa.isMessageUnread() && result != 'None' && result != '') {
 					addMessageToChat(xawa.getRecipient(), result);
-					xawa.markAsRead();
+					xawa.markMessageAsRead();
 				}
 			}
 			catch(err) {

@@ -1,0 +1,171 @@
+\documentclass[9pt]{beamer}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{relsize}
+\usepackage{color}
+
+\definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
+
+\lstset{
+	tabsize=2,
+	keywordstyle=\color{blue},
+	commentstyle=\color{OliveGreen},
+	stringstyle=\color{red},
+	basicstyle=\ttfamily,
+}
+
+\lstdefinelanguage{JavaScript}{
+  keywords={typeof, new, true, false, try, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={class, export, boolean, throw, implements, import, this},
+  ndkeywordstyle=\color{darkgray}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{OliveGreen}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
+\usetheme[height=7mm]{Berlin}
+\title{XMPP API pro webové aplikace}
+\author{Tomáš Vaisar - xvaisa00@stud.fit.vutbr.cz}
+\institute{Vysoké učení technické v Brně - fakulta informačních technologií}
+\date{2010 - 2011}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}
+
+	\begin{itemize}
+		\item Cíle
+		\item Popis API
+		\item Struktura aplikací
+		\item Co je zatím implementováno
+		\item Problémy
+		\item Závěr
+	\end{itemize}
+
+\end{frame}
+
+\section{Cíle}
+
+\begin{frame}{Cíle}
+
+	\begin{itemize}
+		\item navrhnout API pro jednoduchou tvorbu XMPP aplikací postavených na XHTML a JavaScriptu
+		\item umožnit tvorbu pluginů, které budou přenositelné mezi různými IM klienty
+	\end{itemize}
+	
+\end{frame}
+
+\section{Popis API}
+
+\begin{frame}{Popis API}
+	\begin{itemize}
+		\item gettery \textit{(getData(),...)}
+		\item settery 
+		\item metody pro komunikaci \textit{(sendMessage(),...)}
+		\item speciální metody \textit{(init(),...)}
+	\end{itemize}
+\end{frame}
+
+\section{Struktura aplikací}
+
+\begin{frame}
+\end{frame}
+
+\begin{frame}[fragile]{Inicializace aplikace}
+
+%	\begin{block}
+		\begin{lstlisting}[language=HTML]
+...
+<script type="text/javascript">
+		\end{lstlisting}
+		\begin{lstlisting}[language=JavaScript]
+  function appInit() {
+    try {
+      xawa.init();
+      ...
+    } catch(err) {
+      // xawa init error handling
+    }
+  }
+  		\end{lstlisting}
+		\begin{lstlisting}[language=HTML]  	
+</script>
+...
+<body onLoad="appInit();">
+...
+		\end{lstlisting}
+%	\end{block}
+
+\end{frame}
+
+\begin{frame}[fragile]{Odesílání dat}
+Odesílání textové zprávy
+	\begin{lstlisting}[language=JavaScript]
+xawa.sendMessage(message);	
+	\end{lstlisting}
+	
+Odesílání dat (JSON)
+	\begin{lstlisting}[language=JavaScript]
+xawa.sendData(data);
+	\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Příjem dat}
+
+	\begin{lstlisting}[language=JavaScript]
+...
+xawa.init();
+setInterval("getData()",1);
+setInterval("getMessage()",1);
+...		
+
+function getData() {
+  try {
+    if (xawa.isUnread()) {
+      var result = xawa.getData();
+      // processing data
+      ...
+    }
+  } catch (err) {
+    // error handling
+  }
+}
+	\end{lstlisting}
+	
+\end{frame}
+
+\begin{frame}{A sample slide}
+
+A displayed formula:
+
+\[
+  \int_{-\infty}^\infty e^{-x^2} \, dx = \sqrt{\pi}
+\]
+
+An itemized list:
+
+\begin{itemize}
+  \item itemized item 1
+  \item itemized item 2
+  \item itemized item 3
+\end{itemize}
+
+\begin{block}{Pokus}
+  In a right triangle, the square of hypotenuse equals
+  the sum of squares of two other sides.
+\end{block}
+
+\end{frame}
+
+\end{document};

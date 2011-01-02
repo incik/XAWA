@@ -36,9 +36,9 @@ class xawa(QtCore.QObject):
     @QtCore.pyqtSlot(result=str)
     def getXawaVersion(self):
         '''
-            Returns 
+            Returns current XAWA version
         '''
-        return "0.1a"
+        return "0.2.1"
     
     @QtCore.pyqtSlot(result=str)
     def getRecipient(self):
@@ -60,27 +60,55 @@ class xawa(QtCore.QObject):
             Sending plain text messages
         '''
         self.rodic.sendMessage(unicode(message)) # message is 'QString', so we need to convert it into regular UNICODE string 
+        
+    @QtCore.pyqtSlot(str)
+    def sendData(self,data):
+        '''
+            Sending plain text messages
+        '''
+        self.rodic.sendData(unicode(data)) # data is 'QString', so we need to convert it into regular UNICODE string
+
+    @QtCore.pyqtSlot(result=str)
+    def getMessage(self):
+        '''
+            Returns received message
+        '''
+        return self.rodic.receivedMessage
 
     @QtCore.pyqtSlot(result=str)
     def getData(self):
         '''
-            Returns reviced data (JSON)
+            Returns received data (JSON)
         '''
-        return self.rodic.recivedData
+        return self.rodic.receivedData
     
     @QtCore.pyqtSlot()
-    def markAsRead(self):
+    def markMessageAsRead(self):
         '''
-            Sets 
+            Sets received message as read
         '''
-        self.rodic.isUnread = False
+        self.rodic.isMessageUnread = False
+        
+    @QtCore.pyqtSlot()
+    def markDataAsRead(self):
+        '''
+            Sets recieved data as read
+        '''
+        self.rodic.isDataUnread = False
     
     @QtCore.pyqtSlot(result=bool)    
-    def isUnread(self):
+    def isMessageUnread(self):
         '''
-            Returns true/false if the message was already read
+            Returns true/false if the recieved message was already read
         '''
-        return self.rodic.isUnread
+        return self.rodic.isMessageUnread
+    
+    @QtCore.pyqtSlot(result=bool)    
+    def isDataUnread(self):
+        '''
+            Returns true/false if the recieved data was already read
+        '''
+        return self.rodic.isDataUnread
     
     
         
@@ -167,10 +195,14 @@ class Plugin(plugins.PluginBase):
         '''
             Handling incomming message
         '''
-        if (msg.body != None and msg.subject == 'xawa_data'):
-            self.recivedData = unicode(msg.body)
-            self.isUnread = True
-            msg = None
+        if (msg.body != None):
+            if (msg.subject == 'xawa_data'):
+                self.receivedData = unicode(msg.body)
+                self.isDataUnread = True
+            elif (msg.subject == 'xawa_message'):
+                self.receivedMessage = unicode(msg.body)
+                self.isMessageUnread = True
+                
             return True
     
     def openWindow(self):
@@ -204,22 +236,35 @@ class Plugin(plugins.PluginBase):
 
         except Exception, ex:
             raise ex
-        
-
+    
+    def sendData(self,data):
+        '''
+            sends plain text data - it should be JSON string
+        '''
+        try:
+            self.sendIt(data, 'xawa_data')
+        except Exception, ex:
+            raise ex
             
     def sendMessage(self,message):
         '''
             sends plain text message to recipient with JID saved in self.recipient
         '''
+        try:
+            self.sendIt(message, 'xawa_message')
+        except Exception, ex:
+            raise ex
+    
+    def sendIt(self,content,type):
+        '''
+            method for sending plain text through xmpp
+        '''
         m = Message(self.recipient)
-        m.setBody(message)
-        m.setSubject(unicode('xawa_data'))
+        m.setBody(content)
+        m.setSubject(unicode(type))
         m.setComposing("active")
         try:
             self.main.client.message.sendMessage(msg=m)
         except Exception, ex:
             raise ex
-        
-        
-        return message
     
