@@ -136,7 +136,7 @@ class Plugin(plugins.PluginBase):
             
             # registation of event handlers
             self.registerHandler('on_authd', self.on_authd)
-            self.registerHandler('on_message', self.on_message, 10)
+            self.registerHandler('on_message', self.on_message, priority = 4)
             
             self.window = self.loadWindow("%s/xawaWindow_ui.py" % self.pluginDir, self.main)
             self.window.setWindowIcon(self.main.windowIcon())
@@ -199,11 +199,13 @@ class Plugin(plugins.PluginBase):
             if (msg.subject == 'xawa_data'):
                 self.receivedData = unicode(msg.body)
                 self.isDataUnread = True
+                return False
             elif (msg.subject == 'xawa_message'):
                 self.receivedMessage = unicode(msg.body)
                 self.isMessageUnread = True
-                
-            return True
+                return False
+        
+        return True 
     
     def openWindow(self):
         try:
