@@ -1,0 +1,241 @@
+<!--
+	Simple test of sending JSON data
+
+	(c) 2011, Tomáš Vaisar
+-->
+<html>
+<head>
+	<style type="text/css">
+
+		#resultView {
+			width: 592px;
+			height: 304px;
+			border: 1px solid #000;
+		}
+
+		#myBox {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 16px;
+			height: 16px;
+			background: #ff0000;
+		}
+
+		#opponentsBox {
+			position: absolute;
+			left: 0;
+			top: 0px;
+			width: 16px;
+			height: 16px;
+			background: #00ff00;
+		}
+
+	</style>
+
+	<script type="text/javascript">
+
+		function sendArrowData(dir) {
+			try {
+				var arrowJSON = {movement:[{direction:dir,offset:16}]};
+				xawa.sendData(JSON.stringify(arrowJSON));
+			} catch (err) {
+				alert(err);
+			}
+		}
+
+		function keyCheck(e) {
+			var keycode = window.event ? event.keyCode : e.keyCode;
+
+			var myBox = document.getElementById('myBox');
+
+			switch(keycode) {
+				case 37: // left arrowa pressed
+					moveTheBox(myBox, 'left', 16);
+					sendArrowData('left');
+					break;
+				case 38: // up arrow pressed
+					moveTheBox(myBox, 'up', 16);
+					sendArrowData('up');
+					break;
+				case 39: // right arrow pressed
+					moveTheBox(myBox, 'right', 16);
+					sendArrowData('right');
+					break;
+				case 40: // down arrow pressed
+					moveTheBox(myBox, 'down', 16);
+					sendArrowData('down');
+					break;
+			}
+		}
+
+		function init() {
+			try {
+				xawa.init();
+				// register received data listener
+				var receiverRef = setInterval('getData()',1);
+
+				// register keystroke handler
+				document.onkeydown = keyCheck;
+
+				// set player one
+				player = 'player1';
+			}
+			catch(err) {
+				alert('there was an error during xawa initialization!');
+				window.stop();
+			}
+		}
+
+		// we send the other player information, that he should be 'player2'
+		// then we should wait for answer
+		function negotiate() {
+			try {
+				xawa.sendData(JSON.stringify({player: [{playerid:'player2'}]}));
+			} catch (err) {
+				alert(err);
+			}
+			return false;
+		}
+
+		function ack() {
+			try {
+				xawa.sendData(JSON.stringify({ack: [{}]}));
+			} catch (err) {
+				alert(err);
+			}
+		}
+
+		function getData() {
+			try {
+				var result = xawa.getData();
+				if (xawa.isDataUnread() && result != 'None' && result != '') {
+					xawa.markDataAsRead();
+					var obj = JSON.parse(result);
+					// ok, we've got the data. so what we're gonna do with it?
+
+					// should we move the box?
+					if (obj.movement != undefined) {
+						// get the box
+						var opponentsBox = document.getElementById('opponentsBox');
+						moveTheBox(opponentsBox, obj.movement[0].direction, obj.movement[0].offset);
+					}
+					// am I player 1 or 2?
+					else if (obj.player != undefined) {
+						player = obj.player[0].playerid;
+						if (player == 'player2') {
+							document.getElementById('myBox').style.top = '288px';
+							document.getElementById('myBox').style.left = '576px';
+							document.getElementById('opponentsBox').style.top = '0px';
+							// all set, now we send 'negotiation ack' to our opponent
+							try {
+								xawa.sendData(JSON.stringify({negAck: [{}]}));
+							} catch (err) {
+								alert(err);
+							}
+						}
+					}
+					// is the message answer to negotiation?
+					else if (obj.negAck != undefined) {
+						// actually we don't care about content of the message, so ...
+						document.getElementById('opponentsBox').style.top = '288px';
+						document.getElementById('opponentsBox').style.left = '576px';
+					}
+					else {
+						fooPrintData(obj);
+					}
+				}
+			}
+			catch (err) {
+				alert(err);
+				clearInterval(receiverRef);
+			}
+		}
+
+		function moveTheBox(box, direction, offset) {
+			// move it!
+			switch (direction) {
+				case 'right':
+					// movement
+					if (box.style.left == 0)
+						box.style.left = offset + 'px';
+					else {
+						var left = parseInt(box.style.left);
+						box.style.left = left + offset + 'px';
+					}
+					// when we reach the border
+					if (parseInt(box.style.left) >= 592)
+						box.style.left = 0;
+
+					// log the movement into console
+					debugConsole.value += '=> box moved ' + direction + ' by ' + offset + "\n";
+					break;
+
+				case 'left':
+					// movement
+					if (box.style.left == 0)
+						box.style.left = '576px';
+					else {
+						var left = parseInt(box.style.left);
+						box.style.left = left - offset + 'px';
+					}
+					// when we reach the border
+					if (parseInt(box.style.left) <= -16)
+						box.style.left = '576px';
+
+					// log the movement into console
+					debugConsole.value += '=> box moved ' + direction + ' by ' + offset + "\n";
+					break;
+
+				case 'down':
+					// movement
+					if (box.style.top == 0)
+						box.style.top = offset + 'px';
+					else {
+						var top = parseInt(box.style.top);
+						box.style.top = top + offset + 'px';
+					}
+					// when we reach the border
+					if (parseInt(box.style.top) >= 304)
+						box.style.top = 0;
+
+					// log the movement into console
+					debugConsole.value += '=> box moved ' + direction + ' by ' + offset + "\n";
+					break;
+
+				case 'up':
+					// movement
+					if (box.style.top == 0)
+						box.style.top = '288px';
+					else {
+						var top = parseInt(box.style.top);
+						box.style.top = top - offset + 'px';
+					}
+					// when we reach the border
+					if (parseInt(box.style.top) <= -16)
+						box.style.top = '288px';
+
+					// log the movement into console
+					debugConsole.value += '=> box moved ' + direction + ' by ' + offset + "\n";
+			}
+		}
+
+		function getPlayerID() {
+			alert(player);
+			return false;
+		}
+	</script>
+</head>
+
+<body onLoad="init();">
+	<div id="resultView">
+		<div id="myBox"></div>
+		<div id="opponentsBox"></div>
+	</div>
+	<textarea id="debugConsole" cols="80" rows="5"></textarea>
+
+	<a href="#" onClick="javascript: negotiate();">negotiate</a> | <a href="#" onClick="javascript: sendFooData();">foo()</a>
+
+</body>
+</html>
+
