@@ -1,0 +1,18 @@
+<html>
+<head>
+	<title>XAWAlib test</title>
+	<script type="text/javascript" src="http://localhost/xawa/xawalib.js"></script>
+	<!-- <script type="text/javascript" src="http://localhost/xawa/xawatests.js"></script> -->
+	<script type="text/javascript">
+		function foo() {
+			xawa.sendData({'id':1,'name':'karel'}, function() { alert('sended'); }); 
+		}
+	</script>
+</head>
+<body>
+	<h1>AHOJ!</h1>
+	<img src="http://www.google.cz/images/nav_logo40.png" />
+	<br/>
+	<input type="button" id="moo" value="Click me!" onClick="javascript: foo();" />
+</body>
+</html>
