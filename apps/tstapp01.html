@@ -1,3 +1,8 @@
+<!--
+	Simple chatroom created as a simple test of XAWA communication capabilities
+
+	(c) 2010, Tomáš Vaisar
+-->
 <html>
 <head>
 	<title>Test App 1</title>
@@ -53,7 +58,7 @@
 			try {
 				xawa.init();
 				// register function for receiving messages
-				setInterval('getMessage()',1);
+				var receiverRef = setInterval('getMessage()',1);
 				// show recipient's JID
 				document.getElementById('recipientJID').innerHTML = "<strong>" + xawa.getRecipient() + "</strong>";
 				// show sender's JID
@@ -107,6 +112,7 @@
 			}
 			catch(err) {
 				showError(err);
+				clearInterval(receiverRef); // prevents further call of 'getMessage()' method
 			}
 		}
 	</script>

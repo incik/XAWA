@@ -4,6 +4,8 @@
 \usepackage{listings}
 \usepackage{relsize}
 \usepackage{color}
+\usepackage{graphicx}
+\usepackage{comment}
 
 \definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
 
@@ -35,6 +37,7 @@
 \author{Tomáš Vaisar - xvaisa00@stud.fit.vutbr.cz}
 \institute{FIT VUT v Brně}
 \date{2010 - 2011}
+\setbeamertemplate{footline}[frame number]
 
 \begin{document}
 
@@ -42,31 +45,115 @@
 \titlepage
 \end{frame}
 
+%\section{Cíle}
+
 \begin{frame}
 
-	\begin{itemize}
-		\item Cíle
-		\item Popis API
-		\item Struktura aplikací
-		\item Co je zatím implementováno
-		\item Problémy
-		\item Závěr
-	\end{itemize}
-
-\end{frame}
-
-\section{Cíle}
-
-\begin{frame}{Cíle}
-
+	\textbf{Cíle}
 	\begin{itemize}
 		\item navrhnout API pro jednoduchou tvorbu XMPP aplikací postavených na XHTML a JavaScriptu
 		\item umožnit tvorbu pluginů, které budou přenositelné mezi různými IM klienty
+		\item vytvořit knihovnu zapouzdřující některé běžné operace (v JavaScriptu)
+	\end{itemize}
+
+	\vspace{5mm}
+	
+	\textbf{Použité technologie}
+	\begin{itemize}
+		\item QtWebKit
+		\item XHTML, JavaScript, Python, C++
 	\end{itemize}
 	
 \end{frame}
+	\begin{comment}
+	\textbf{Proč web?}
+	\begin{itemize}
+		\item vývoj webu je snadnější a rychlejší než vývoj stand-alone aplikace
+		\item webové aplikace jsou skutečně multiplatformní 
+	\end{itemize}
+	
+	\textbf{Proč XMPP?}
+	\begin{itemize}
+		\item otevřený standard
+		\item šifrováníX
+	\end{itemize}
+	\end{comment}
 
-\section{Popis API}
+
+
+\begin{frame}
+
+	\textbf{Schéma komunikace}
+
+	\begin{center}
+		\includegraphics[width=80mm]{drawing.png}
+	\end{center}
+\end{frame}
+
+%\section{Popis API}
+
+\begin{frame}[fragile]
+
+
+	\textbf{Textová komunikace:}
+
+	\begin{lstlisting}[language=Javascript]
+		xawa.sendMessage("ahoj!");
+		
+		var result = xawa.getMessage();
+	\end{lstlisting}
+	
+	\vspace{5mm}
+	
+	\textbf{Datová komunikace:}
+	
+	\begin{lstlisting}[language=Javascript]
+		xawa.sendData({
+   pokusnyObject:[{
+       id:1,
+       text:"Lorem ipsum dolor"
+   }]
+		});
+		
+		var result = xawa.getData();
+	\end{lstlisting}
+\end{frame}
+
+\begin{frame}
+
+	\textbf{Co je zatím implementováno}
+	\begin{itemize}
+		\item základní plugin pro Jabbim
+		\item textová komunikace
+		\item datová komunikace
+		\item jednoduché ukázkové aplikace
+	\end{itemize}
+	
+	\vspace{5mm}
+	
+	\textbf{Co je ještě v plánu}
+	\begin{itemize}
+		\item změna formátu XMPP zpráv
+		\item plugin pro Psi
+		\item využití možností MUC
+		\item port nějaké již existující aplikace
+	\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+	\begin{center}
+	\textbf{\LARGE{Děkuji za pozornost}}
+	
+	\vspace{5mm}
+	\textbf{Dotazy?}
+	\end{center}
+\end{frame}
+
+
+%\section{Struktura aplikací}
+
+\begin{comment}
 
 \begin{frame}{Popis API}
 	\begin{itemize}
@@ -77,10 +164,6 @@
 	\end{itemize}
 \end{frame}
 
-\section{Struktura aplikací}
-
-\begin{frame}
-\end{frame}
 
 \begin{frame}[fragile]{Inicializace aplikace}
 
@@ -145,27 +228,6 @@ function getData() {
 	
 \end{frame}
 
-\begin{frame}{A sample slide}
-
-A displayed formula:
-
-\[
-  \int_{-\infty}^\infty e^{-x^2} \, dx = \sqrt{\pi}
-\]
-
-An itemized list:
-
-\begin{itemize}
-  \item itemized item 1
-  \item itemized item 2
-  \item itemized item 3
-\end{itemize}
-
-\begin{block}{Pokus}
-  In a right triangle, the square of hypotenuse equals
-  the sum of squares of two other sides.
-\end{block}
-
-\end{frame}
+\end{comment}
 
 \end{document};

@@ -9,6 +9,14 @@
 
 (function (window, document, undefined) {
 
+	var __xawa = window.xawa;
+
+	// little helper
+	function sleep(delay) {
+		var start = new Date().getTime();
+		while (new Date().getTime() < start + delay);
+	}
+
 	// encapsulating XAWA object
 	var _x = function () { };
 
@@ -17,7 +25,7 @@
 		_init: function () {
 			try {
 				// let's call internal xawa init() method
-				xawa.init();
+				__xawa.init();
 			} catch (err) {
 			// if initialization fails, there's no reason to continue
 				window.stop();
@@ -28,23 +36,66 @@
 		//
 		getVersion: function () {
 			try {
-				return xawa.getVersion();
+				return __xawa.getXawaVersion();
 			} catch (err) {
 				throw err;
 			}
 		},
 
+		recipient: (function () {
+			return __xawa.getRecipient();
+		})(),
+
 		//
 		sendData: function (json_data, callback) {
 			try {
-				xawa.sendData(JSON.stringify(json_data));
+				__xawa.sendData(JSON.stringify(json_data));
 				if (callback !== undefined) {
 					callback();
 				}
 			} catch (err) {
 				throw 'Exception: Given object is not valid JSON object!';
 			}
-		}
+		},
+
+		// invite
+		invite: function (jid, appConfig, onAcceptCallback, onRefuseCallback) {
+			try {
+				__xawa.sendInvite(jid === undefined ? __xawa.getRecipient() : jid, JSON.stringify(appConfig));
+				//sleep(10000);
+				var tstint = setInterval(function() {
+				var result = __xawa.getInvitationAnswer();
+				if (result == true && onAcceptCallback !== undefined) {
+					onAcceptCallback();
+					clearInterval(tstint);
+				} else if (onRefuseCallback !== undefined) {
+					onRefuseCallback();
+					clearInterval(tstint);
+				}
+				}, 1000);
+				
+				/*var timeout = 10000;
+				var timer;
+				var answer = (function __getInvitationAnswer() {
+					if (timeout == 0) {
+						clearTimeout(timer);
+						return undefined;
+					}
+					if (__xawa.invitationAnswer != '') {
+						clearTimeout(timer);
+						return __xawa.invitationAnswer;
+					}
+					timeout--;
+					timer = setTimeout(function () { __getInvitationAnswer() }, 30000);
+				})();
+
+				if (answer === undefined) {
+					alert('xxxx');
+				}*/
+			} catch (err) {
+				
+			}
+		},
 	};
 	
 	var X = new _x();

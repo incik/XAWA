@@ -4,18 +4,15 @@ Created on 24.10.2010
 @author: incik
 '''
 
-#import sys,os,time
-#sys.path.append('.')
+import json
 from include import plugins
-from PyQt4 import QtCore #, QtGui
+from PyQt4 import QtCore, QtGui
 #from PyQt4.QtWebKit import QWebView
-#from urllib import quote, unquote
 from twisted.python import log
-#from twisted.words.protocols.jabber.xmlstream import IQ
-#from twisted.words.xish.domish import Element
+from twisted.words.protocols.jabber.xmlstream import IQ
 from pyxl.message import Message
 from core import PluginManager
-
+import time
 '''
     Static class witch works as a proxy for calling XAWA plugin methods from JavaScript.
 '''
@@ -53,7 +50,23 @@ class xawa(QtCore.QObject):
             Returns JID of sender
         '''
         return self.rodic.sender
+    
+    @QtCore.pyqtSlot(str)
+    def sendConfiguration(self,configObject):
+        '''
+            
+        '''
+        self.rodic.sendConfiguration(unicode(configObject))
+    
+    @QtCore.pyqtSlot(str,str,result=bool)
+    def sendInvite(self, jid, appInfoJSON):
+        appInfo = json.loads(unicode(appInfoJSON))
+        self.rodic.sendInvite(unicode(jid), appInfo)
         
+    @QtCore.pyqtSlot(result=bool)
+    def getInviteAnswer(self):
+        return self.rodic.inviteAnswer
+    
     @QtCore.pyqtSlot(str)
     def sendMessage(self,message):
         '''
@@ -150,14 +163,21 @@ class Plugin(plugins.PluginBase):
                 raise ex
             
             self.window.ui.lineEdit.setReadOnly(True)
-            self.window.ui.lineEdit.setText(QtCore.QString('tstapp1'))
+            self.window.ui.lineEdit.setText(QtCore.QString('xawa testing applications'))
            
         else:
             self.loadConfig(homedir)
            
     def on_authd(self):
         try:
-            self.registerFeature("http://xawa.vaisar.cz/protocol/xawa")
+           
+            # add observer for invitations
+            self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session/invite", self.onInvite, priority = 1)
+            self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session", self.onAccept, priority = 1)
+            #self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session", self.onRefuse, priority = 1)
+            
+            # register our features in client capabilities
+            self.registerFeature("http://xawa.vaisar.cz")
             
             if (self.main.client != None):            
                 senderjid = self.main.client.jid 
@@ -178,7 +198,7 @@ class Plugin(plugins.PluginBase):
         '''
         jid = unicode(contact.jid)
         
-        if self.main.client.hasFeature(jid,"http://xawa.vaisar.cz/protocol/xawa"):
+        if self.main.client.hasFeature(jid,"http://xawa.vaisar.cz"):
             # wheee, someone is using our feature!
                 
             self.action = menu.addAction(self.tr("Open XAWA window"))
@@ -191,22 +211,6 @@ class Plugin(plugins.PluginBase):
             # when the item is clicked, open xawa window
             QtCore.QObject.connect(self.action,QtCore.SIGNAL("triggered ( bool )"),self.openWindow)
     
-    def on_message(self,msg):
-        '''
-            Handling incomming message
-        '''
-        if (msg.body != None):
-            if (msg.subject == 'xawa_data'):
-                self.receivedData = unicode(msg.body)
-                self.isDataUnread = True
-                return False
-            elif (msg.subject == 'xawa_message'):
-                self.receivedMessage = unicode(msg.body)
-                self.isMessageUnread = True
-                return False
-        
-        return True 
-    
     def openWindow(self):
         try:
             self.window.show()
@@ -216,14 +220,8 @@ class Plugin(plugins.PluginBase):
     def pushButtonClicked(self):
         self.loadApp()
         
-    def loadApp(self):
-        try:
-            appUrl = 'file:///var/www/xawa/tstapp01.html'
-            if appUrl != '':                
-                self.window.ui.webView.load(QtCore.QUrl(appUrl))
-            
-        except Exception, ex:
-            raise ex
+    def loadApp(self,appUrl='file:///var/www/xawa/tstapps.html'):    
+        self.window.ui.webView.load(QtCore.QUrl(appUrl))
     
     def initJavascript(self):
         try:
@@ -238,6 +236,107 @@ class Plugin(plugins.PluginBase):
 
         except Exception, ex:
             raise ex
+        
+    def sendInvite(self,jid,appInfo):
+        iq = IQ(self.main.client.xmlstream, 'set')
+        iq['xml:lang'] = self.main.client.xmlLang
+        iq['type'] = 'set'
+        iq['to'] = jid + '/jabbim'
+        q = iq.addElement('query')
+        q['xmlns']='http://xawa.vaisar.cz'
+        s = q.addElement('session')
+        if (appInfo != None):
+            s['appName'] = appInfo['appName']
+            s['appUrl'] = appInfo['appUrl']
+        s.addElement('invite')
+        self.main.client.disp(iq['id'])
+        d = iq.send()
+        
+        return d
+    
+    def onInvite(self, elem):
+        jid = self.main.getJid(elem['from']).userhost()
+        q = elem.firstChildElement() # query
+        s = q.firstChildElement() # session
+        ques = QtGui.QMessageBox.question(self.main, 'Invitation', 'User ' + jid + ' invites you to join application "' + s['appName'] + '". Do you want to accept?', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+        if ques == QtGui.QMessageBox.Yes:
+            self._acceptInvitation(jid, s['appUrl'])
+        else:
+            self._refuseInvitation(jid)
+                    
+        return False
+    
+    def onAccept(self,elem):
+        rec = elem['from']
+        q = elem.firstChildElement()
+        ses = q.firstChildElement()
+        res = ses.firstChildElement().name
+        if res == 'accept':
+            message = QtGui.QMessageBox()
+            message.setText(rec + ' says: "yes!"')
+            message.exec_()
+        elif res == 'refuse':
+            message = QtGui.QMessageBox()
+            message.setText(rec + " doesn't want to play :(")
+            message.exec_()
+        return False
+    
+    def onRefuse(self,elem):
+        return False      
+    
+    def _acceptInvitation(self, jid, url):
+        iq = IQ(self.main.client.xmlstream, 'set')
+        iq['xml:lang'] = self.main.client.xmlLang
+        iq['type'] = 'set'
+        iq['to'] = jid + '/jabbim'
+        q = iq.addElement('query')
+        q['xmlns']='http://xawa.vaisar.cz'
+        s = q.addElement('session')
+        s.addElement('accept')
+        s['appUrl'] = url
+        self.main.client.disp(iq['id'])
+        d = iq.send()
+        
+        # set the property
+        self.inviteAnswer = True
+        
+        ##open window with app
+        self.openWindow()
+        self.loadApp(url)
+        
+        return d
+    
+    def _refuseInvitation(self, jid):
+        iq = IQ(self.main.client.xmlstream, 'set')
+        iq['xml:lang'] = self.main.client.xmlLang
+        iq['type'] = 'set'
+        iq['to'] = jid + '/jabbim'
+        q = iq.addElement('query')
+        q['xmlns']='http://xawa.vaisar.cz'
+        s = q.addElement('session')
+        s.addElement('refuse')
+        self.main.client.disp(iq['id'])
+        d = iq.send()
+        
+        self.iniviteAnswer = False
+        
+        return d
+            
+    def on_message(self,msg):
+        '''
+            Handling incomming message
+        '''
+        if (msg.body != None):
+            if (msg.subject == 'xawa_data'):
+                self.receivedData = unicode(msg.body)
+                self.isDataUnread = True
+                return False
+            elif (msg.subject == 'xawa_message'):
+                self.receivedMessage = unicode(msg.body)
+                self.isMessageUnread = True
+                return False
+        
+        return True
     
     def sendData(self,data):
         '''
