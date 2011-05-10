@@ -1,0 +1,68 @@
+/* Global layout */
+div#game {
+	overflow: auto;
+}
+
+table#board {
+	float: left;
+}
+
+div#sidebar {
+	float: left;
+	width: 200px;
+}
+
+fieldset#movementHistory ul {
+	overflow: auto;
+	height: 417px;
+}
+
+/* Gameboard */
+table {
+	border: 1px solid #000;	
+}
+
+table td.field {
+	border: 1px solid #000;
+	width: 64px;
+	height: 64px;
+}
+
+table td.coords {
+	font-weight: bolder;
+	text-align: center;
+	border: none;
+	height: 26px;
+}
+
+table tr.row td.coords {
+	width: 26px;
+	height: auto;	
+}
+
+td.blackfield { background: #444; }
+
+/* pieces */
+div.piece {
+	margin: 6px;
+	width: 50px;
+	height: 50px;
+	border: 1px solid #000;
+	border-radius: 50px;
+	z-index: 10;
+	cursor: pointer;
+}
+
+div.piece.black {
+	border-color: #fff;
+	background: #000;	
+}
+
+div.piece.white {
+	border-color: #000;
+	background: #fff;
+}
+
+div.piece.master {
+	background: #330000;
+}

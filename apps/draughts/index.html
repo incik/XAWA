@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>Draughts</title>
+	<meta >
+	<link rel="stylesheet" href="css/style.css" type="text/css" media="screen" />
+	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/themes/base/jquery-ui.css" type="text/css" media="all" />
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js" type="text/javascript"></script> 
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/jquery-ui.min.js" type="text/javascript"></script>
+	<script src="js/draughts.js" type="text/javascript" charset="utf-8"></script>
+	<script src="../xawalib.js" type="text/javascript" charset="utf-8"></script>
+	
+</head>
+<body>
+	<div id="menu">
+		<input type="button" id="inviteButton" value="invite" />
+	</div>
+	<div id="game">
+		<table id="board">
+			<tr class="row">
+				<td class="coords">8</td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">7</td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">6</td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece black"></div></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">5</td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">4</td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+				<td class="field"></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">3</td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">2</td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+			</tr>
+			<tr class="row">
+				<td class="coords">1</td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td>
+				<td class="field"><div class="piece white"></div></td>
+				<td class="field"></td></tr>
+			<tr>
+				<td></td>
+				<td class="coords">A</td>
+				<td class="coords">B</td>
+				<td class="coords">C</td>
+				<td class="coords">D</td>
+				<td class="coords">E</td>
+				<td class="coords">F</td>
+				<td class="coords">G</td>
+				<td class="coords">H</td>
+			</tr>
+		</table>
+		<div id="sidebar">
+			<fieldset id="gameStatus">
+				<legend>Current state</legend>
+				<div id="currentPlayer">It's <strong></strong>'s turn!</div>
+				<div id="yourScore">Your score: <strong></strong></div>
+				<div id="opponentsScore">Opponent's score: <strong></strong></div>
+				<div><input id="skipTurnButton" type="button" value="Skip this turn" disabled /></div>
+			</fieldset>
+			<fieldset id="movementHistory">
+				<legend>Movement history</legend>
+				<ul>
+				</ul>
+			</fieldset>
+		</div>
+	</div>
+</body>
+</html>
