@@ -70,16 +70,31 @@ class xawa(QtCore.QObject):
     @QtCore.pyqtSlot(str)
     def sendMessage(self,message):
         '''
-            Sending plain text messages
+            Sending text message in XAWA format
+        '''
+        self.rodic.sendXawaMessage(unicode(message))
+    
+    @QtCore.pyqtSlot(str)
+    def sendClassicMessage(self,message):
+        '''
+            Sending classic plain text messages
         '''
         self.rodic.sendMessage(unicode(message)) # message is 'QString', so we need to convert it into regular UNICODE string 
         
+    @QtCore.pyqtSlot(str)
+    def sendDataInLegacyMode(self,data):
+        '''
+            Sending plain text messages
+        '''
+        self.rodic.sendData(unicode(data)) # data is 'QString', so we need to convert it into regular UNICODE string
+
     @QtCore.pyqtSlot(str)
     def sendData(self,data):
         '''
             Sending plain text messages
         '''
-        self.rodic.sendData(unicode(data)) # data is 'QString', so we need to convert it into regular UNICODE string
+        self.rodic.sendXawaData(unicode(data)) # data is 'QString', so we need to convert it into regular UNICODE string
+
 
     @QtCore.pyqtSlot(result=str)
     def getMessage(self):
@@ -157,8 +172,10 @@ class Plugin(plugins.PluginBase):
             self.window.ui.pushButton.clicked.connect(self.pushButtonClicked)
             self.window.ui.webView.loadFinished.connect(self.loadFinished)
             
+            self.mainFrame = self.window.ui.webView.page().mainFrame() #shortcut
+            
             try:
-                self.window.ui.webView.page().mainFrame().javaScriptWindowObjectCleared.connect(self.initJavascript)
+                self.mainFrame.javaScriptWindowObjectCleared.connect(self.initJavascript)
             except Exception, ex:
                 raise ex
             
@@ -174,6 +191,7 @@ class Plugin(plugins.PluginBase):
             # add observer for invitations
             self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session/invite", self.onInvite, priority = 1)
             self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session", self.onAccept, priority = 1)
+            self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']", self.onXawaMessage, priority = 4)
             #self.main.client.xmlstream.addObserver("/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session", self.onRefuse, priority = 1)
             
             # register our features in client capabilities
@@ -220,12 +238,12 @@ class Plugin(plugins.PluginBase):
     def pushButtonClicked(self):
         self.loadApp()
         
-    def loadApp(self,appUrl='file:///var/www/xawa/tstapps.html'):    
+    def loadApp(self,appUrl='http://localhost/xawa/tstapps.html'):    
         self.window.ui.webView.load(QtCore.QUrl(appUrl))
     
     def initJavascript(self):
         try:
-            self.window.ui.webView.page().mainFrame().addToJavaScriptWindowObject('xawa',xawa(self))
+            self.mainFrame.addToJavaScriptWindowObject('xawa',xawa(self))
         except Exception,ex:
             raise ex
             
@@ -233,9 +251,19 @@ class Plugin(plugins.PluginBase):
         try:
             novyTitle = self.window.ui.webView.title()
             self.window.setWindowTitle(novyTitle)
+            # if onApplicationReady is not implemented, die silently
+            self.mainFrame.evaluateJavaScript("try { onApplicationReady(); } catch (err) {alert(err); } null")
 
         except Exception, ex:
             raise ex
+        
+    def loadConfiguration(self, conf):
+        if (conf != None):
+            if (conf['__window'] != None):
+                if (conf['__window']['width'] != None and conf['__window']['height'] != None):
+                    self.window.resize(conf['__window']['width'], conf['__window']['height'])
+            if (conf['appName'] != None):
+                self.window.setWindowTitle(conf['appName'])
         
     def sendInvite(self,jid,appInfo):
         iq = IQ(self.main.client.xmlstream, 'set')
@@ -249,6 +277,10 @@ class Plugin(plugins.PluginBase):
             s['appName'] = appInfo['appName']
             s['appUrl'] = appInfo['appUrl']
         s.addElement('invite')
+        
+        conf = s.addElement('configuration')
+        conf.addChild(json.dumps(appInfo)) # puts whole string inside the tag
+        
         self.main.client.disp(iq['id'])
         d = iq.send()
         
@@ -258,33 +290,38 @@ class Plugin(plugins.PluginBase):
         jid = self.main.getJid(elem['from']).userhost()
         q = elem.firstChildElement() # query
         s = q.firstChildElement() # session
+        conf = None
+        try:
+            conf = json.loads(s.children[1].children[0]) # configuration object (if its present)
+        except Exception, ex:
+            # ok, it should be there, but we can be shure ...
+            pass
+        
         ques = QtGui.QMessageBox.question(self.main, 'Invitation', 'User ' + jid + ' invites you to join application "' + s['appName'] + '". Do you want to accept?', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if ques == QtGui.QMessageBox.Yes:
-            self._acceptInvitation(jid, s['appUrl'])
+            self.recipient = jid
+            self._acceptInvitation(jid, s['appUrl'], conf)
         else:
             self._refuseInvitation(jid)
                     
         return False
     
     def onAccept(self,elem):
-        rec = elem['from']
         q = elem.firstChildElement()
         ses = q.firstChildElement()
         res = ses.firstChildElement().name
         if res == 'accept':
-            message = QtGui.QMessageBox()
-            message.setText(rec + ' says: "yes!"')
-            message.exec_()
+            # if accepted, let's fire JavaScript 'event'
+            self.mainFrame.evaluateJavaScript('onInvitationAccept(); null')
         elif res == 'refuse':
-            message = QtGui.QMessageBox()
-            message.setText(rec + " doesn't want to play :(")
-            message.exec_()
+            # if refused, let's fire JavaScript 'event'
+            self.mainFrame.evaluateJavaScript('onInvitationRefuse(); null')
         return False
     
     def onRefuse(self,elem):
         return False      
     
-    def _acceptInvitation(self, jid, url):
+    def _acceptInvitation(self, jid, url, conf):
         iq = IQ(self.main.client.xmlstream, 'set')
         iq['xml:lang'] = self.main.client.xmlLang
         iq['type'] = 'set'
@@ -298,11 +335,12 @@ class Plugin(plugins.PluginBase):
         d = iq.send()
         
         # set the property
-        self.inviteAnswer = True
+        # self.inviteAnswer = True
         
         ##open window with app
         self.openWindow()
         self.loadApp(url)
+        self.loadConfiguration(conf)
         
         return d
     
@@ -318,7 +356,7 @@ class Plugin(plugins.PluginBase):
         self.main.client.disp(iq['id'])
         d = iq.send()
         
-        self.iniviteAnswer = False
+        #self.iniviteAnswer = False
         
         return d
             
@@ -328,17 +366,70 @@ class Plugin(plugins.PluginBase):
         '''
         if (msg.body != None):
             if (msg.subject == 'xawa_data'):
+                # this way is now obsolete 
                 self.receivedData = unicode(msg.body)
-                self.isDataUnread = True
+                self.isDataUnread = True                            
                 return False
             elif (msg.subject == 'xawa_message'):
                 self.receivedMessage = unicode(msg.body)
                 self.isMessageUnread = True
+                '''
+                escapedString = msg.body.replace("'","\'")                
+                self.mainFrame.evaluateJavaScript("try { onMessageReceived('" + escapedString + "'); } catch(err) { alert(err); } null")
+                '''
+                
                 return False
         
         return True
     
-    def sendData(self,data):
+    def onXawaMessage(self,elem):
+        q = elem.firstChildElement() # query
+        xm = q.firstChildElement() # xawaMessage
+        if (xm.name == "xawaMessage"):
+            b = xm.firstChildElement() # body
+            try:
+                escapedString = b.children[0].replace("'","\'")   
+                self.mainFrame.evaluateJavaScript("try { onMessageReceived('" + escapedString + "'); } catch(err) { alert(err); } null")
+            except Exception, ex:
+                raise ex
+            return False
+        elif (xm.name == "xawaData"):
+            d = xm.firstChildElement() # data
+            try:
+                self.mainFrame.evaluateJavaScript("try { onDataReceived('" + d.children[0] + "'); } catch(err) { alert(err); } null")
+            except Exception, ex:
+                raise ex
+            
+    def sendXawaMessage(self, message):
+        iq = IQ(self.main.client.xmlstream, 'set')
+        iq['xml:lang'] = self.main.client.xmlLang
+        iq['type'] = 'set'
+        iq['to'] = self.recipient + '/jabbim'
+        q = iq.addElement('query')
+        q['xmlns']='http://xawa.vaisar.cz'
+        xm = q.addElement('xawaMessage')
+        b = xm.addElement('body')
+        b.addChild(message)
+        self.main.client.disp(iq['id'])
+        d = iq.send()
+        return d
+    
+    def sendXawaData(self, data):
+        iq = IQ(self.main.client.xmlstream, 'set')
+        iq['xml:lang'] = self.main.client.xmlLang
+        iq['type'] = 'set'
+        iq['to'] = self.recipient + '/jabbim'
+        q = iq.addElement('query')
+        q['xmlns']='http://xawa.vaisar.cz'
+        xm = q.addElement('xawaData')
+        b = xm.addElement('data')
+        b.addChild(data)
+        self.main.client.disp(iq['id'])
+        d = iq.send()
+        return d
+     
+    
+    def sendDataInLecagyMode(self,data):
         '''
             sends plain text data - it should be JSON string
         '''

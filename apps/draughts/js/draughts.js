@@ -6,12 +6,13 @@ var XAWA_APP_CONFIG = {
 	appName : "Draughts - Simple board game",
 	appUrl : "http://localhost/xawa/draughts/",
 	__window : {
-		width : 800,
-		height : 640 
+		width : 900,
+		height : 760 
 	}
 }
 
 // GLOBAL SETTINGS
+// it reflects current state of game
 var GLOBALS = {
 	currentPlayer : 1,
 	playerCanContinue : false,
@@ -19,7 +20,8 @@ var GLOBALS = {
 	__player2 : "black",
 	__player1Score : 0,
 	__player2Score : 0,
-	__userIsPlayer : 1 // set by xawa negotiation
+	__userIsPlayer : 1, // set by xawa negotiation
+	__opponentIsReady: false
 }
 
 function switchPlayers() {
@@ -31,7 +33,9 @@ function switchPlayers() {
 
 function playerCanPlayAgain() {
 	GLOBALS.playerCanContinue = true;
-	$('#skipTurnButton').removeAttr('disabled');
+	if (GLOBALS.currentPlayer == GLOBALS.__userIsPlayer) {
+		$('#skipTurnButton').removeAttr('disabled');
+	}
 }
 
 function skipThisTurn() {
@@ -133,7 +137,8 @@ function removePiece(piece) {
 
 // @param move - array with original coordinates and final coordinates (i.e. [[5,3],[6,4]] )
 // @param piece - the element witch is currently moved
-function validateMove(move, piece) {
+// @param options - nonrequired param with additional options modifying behavior
+function validateMove(move, piece, options) {
 	var start = move[0];
 	var finish = move[1];
 	
@@ -171,6 +176,13 @@ function validateMove(move, piece) {
 					coords = {"x": parseInt(finish.x) - 1, "y": parseInt(finish.y) + 1};
 				}
 			}
+			
+			if (options !== undefined && options.skipMineFieldDetection == true) {
+				// nop
+			} else if (isThatPieceMine(getPiece(coords))) {
+				return false;
+			}
+			
 			if (isTheWayEmpty(start, finish) && !isFieldEmpty(coords) && !isThatPieceMine(getPiece(coords))) {
 				updateScore(GLOBALS.currentPlayer);
 				removePiece(getPiece(coords)); // nom non nom nom
@@ -206,7 +218,14 @@ function validateMove(move, piece) {
 				coords = {"x": parseInt(start.x) + 1, "y": start.y - 1};
 			}
 		}
-		if (!isFieldEmpty(coords) && !isThatPieceMine(getPiece(coords))) {
+		
+		if (options !== undefined && options.skipMineFieldDetection == true) {
+			// nop
+		} else if (isThatPieceMine(getPiece(coords))) {
+			return false;
+		}
+			
+		if (!isFieldEmpty(coords)) { // && !isThatPieceMine(getPiece(coords))) { 
 			updateScore(GLOBALS.currentPlayer);
 			removePiece(getPiece(coords)); // nom non nom nom
 			playerCanPlayAgain();
@@ -229,7 +248,7 @@ function validateMove(move, piece) {
 	if ((piece.hasClass(GLOBALS.__player1) && finish.y == 0)
 		|| (piece.hasClass(GLOBALS.__player2) && finish.y == 7))
 		if (!isItMaster(piece)) piece.addClass('master');
-		
+			
 	return true;
 }
 
@@ -285,37 +304,85 @@ function updateScore(player) {
 }
 
 function showScore() {
-	if (GLOBALS.userIsPlayer == 1) {
+	if (GLOBALS.__userIsPlayer == 1) {
 		$('#yourScore strong').html(GLOBALS.__player1Score);
 		$('#opponentsScore strong').html(GLOBALS.__player2Score);
 	}
-	else if (GLOBALS.userIsPlayer == 2) {
+	else if (GLOBALS.__userIsPlayer == 2) {
 		$('#yourScore strong').html(GLOBALS.__player2Score);
 		$('#opponentsScore strong').html(GLOBALS.__player1Score);
 	}
 }
 
+function __registerEventHandlers() {
+	// function handling incomming messages
+	onApplicationReady = function() {
+		//alert('onAppReady');
+		xawa.sendData({ ready : true });
+	};
+	
+	onMessageReceived = function(message) {
+		alert(message);
+	};
+	
+	onDataReceived = function(data) {
+		var recv = JSON.parse(data);
+		// what did we received?
+		if (recv.ready !== undefined) {
+			//alert('ready recived');
+			$('#startButton').removeAttr('disabled');
+		} else if (recv.move !== undefined) { // move?
+			var coords = recv.move;
+			var start = coords[0];
+			var finish = coords[1];
+		
+			var piece = getPiece(start);
+			move(getField(finish), piece);
+			if (validateMove(coords, piece, { skipMineFieldDetection : true })) {
+				logMove(coords);
+				updateGameInfo();
+			}
+		} else if (recv.switchPlayers !== undefined) {
+			switchPlayers();
+		} else if (recv.skipTurn !== undefined) {
+			skipThisTurn();
+		} else if (recv.negotiate !== undefined) {
+			GLOBALS.__userIsPlayer = recv.player;
+			xawa.sendData({ startGame: true });
+			//alert(GLOBALS.__userIsPlayer);
+		} else if (recv.startGame !== undefined) {
+			//alert(GLOBALS.__userIsPlayer);
+		}
+	};
+}
 
 $(document).ready(function() {
 	
-	try {
-	} catch (err) {
-		alert(err);
-	}
-	
 	__initGame();
+	__registerEventHandlers();
 	updateGameInfo();
 	
 	$('#inviteButton').click(function() {
-		alert(xawa.invite(xawa.recipient, XAWA_APP_CONFIG));
+		xawa.invite(xawa.recipient, XAWA_APP_CONFIG, {
+			onAccept: function() { alert('Let the game begin!'); },
+			onRefuse: function() { alert(xawa.recipient + " doesn't want to play."); }
+		});
+	});
+	
+	$('#startButton').click(function() {
+		xawa.sendData({ negotiate: true, player : 2 });
+	});
+	
+	$('#sendMessageButton').click(function() {
+		xawa.sendMessage("Lorem ipsum dolor sit amet");//, { messageType: 'classic' });
 	});
 	
 	$('div.piece').draggable({ revert: "invalid",
 		drag: function() {
 			var valid = true;
 			// check if we can play
-			//if (GLOBALS.userIsPlayer != GLOBALS.currentPlayer)
-			//	valid = false;
+			if (GLOBALS.__userIsPlayer != GLOBALS.currentPlayer)
+				valid = false;
 		
 			// hey! don't touch opponent's pieces!
 			if ($(this).hasClass(GLOBALS.__player1) && GLOBALS.currentPlayer != 1)
@@ -331,6 +398,7 @@ $(document).ready(function() {
 	
 	$('#skipTurnButton').click(function() {
 		skipThisTurn();
+		xawa.sendData({ skipTurn: true });
 		return false;
 	})
 	
@@ -347,9 +415,13 @@ $(document).ready(function() {
 				var moveCoords = [originalPosition, finalPosition];
 				// check if it's valid move
 				if (validateMove(moveCoords, piece)) {
+					// send the move through XAWA
+					xawa.sendData({ move : moveCoords });
 					logMove(moveCoords);
-					if (!GLOBALS.playerCanContinue)
+					if (!GLOBALS.playerCanContinue) {
 						switchPlayers();
+						xawa.sendData({ switchPlayers: true });
+					}
 					updateGameInfo();
 				} else { // that move wasn't valid
 					move(originalField, piece);
