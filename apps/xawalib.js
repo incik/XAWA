@@ -7,15 +7,40 @@
  * Released under GPL
  */
 
+/*
+ * Following event are fired from browser (XAWA plugin window)
+ */
+function onApplicationReady() {
+	throw('Exception: onApplicationReady not implemented!');
+}
+
+function onInvitationAccept() {
+	throw('Exception: onInvitationAccept not implemented!');
+}
+
+function onInvitationRefuse() {
+	throw('Exception: onInvitationRefuse not implemented!');
+}
+
+function onMessageReceived(msg) {
+	throw('Exception: onMessageReceived not implemented!');
+}
+
+/*function onDataAccepted() {
+	throw('Exception: onDataRecieved not implemented!');
+}*/
+
+function onDataReceived(data) {
+	throw('Exception: onDataReceived not implemented!');
+}
+
+function onSessionLeave() {
+	throw('Exception: onSessionLeave not implemented!');
+}
+
 (function (window, document, undefined) {
 
 	var __xawa = window.xawa;
-
-	// little helper
-	function sleep(delay) {
-		var start = new Date().getTime();
-		while (new Date().getTime() < start + delay);
-	}
 
 	// encapsulating XAWA object
 	var _x = function () { };
@@ -42,60 +67,80 @@
 			}
 		},
 
+		// read-only property
 		recipient: (function () {
 			return __xawa.getRecipient();
 		})(),
 
-		//
-		sendData: function (json_data, callback) {
+		/*
+		getMessage: function (callback) {
 			try {
-				__xawa.sendData(JSON.stringify(json_data));
-				if (callback !== undefined) {
-					callback();
+				if (callback !== undefined)
+					onMessageReceived = callback;
+			} catch(err) {
+				alert(err);
+			}
+		},*/
+
+		//
+		sendMessage: function(message, options) {
+			try {
+				if (options !== undefined) {
+					if (options.messageType == 'classic')
+						__xawa.sendClassicMessage(message);					
+				} else {
+					__xawa.sendMessage(message);
 				}
 			} catch (err) {
-				throw 'Exception: Given object is not valid JSON object!';
+				alert(err);
+			}
+		},
+
+		/*
+		getData : function(callback) {
+			if (callback !== undefined) {
+				onDataReceived = callback;
+			}
+		}*/
+
+		//
+		sendData: function (json_data, options) { //onDataAcceptCallback) {
+			try {
+				if (options !== undefined) {
+					if (options.mode == 'legacy')
+						__xawa.sendDataInLegacyMode(JSON.stringify(json_data));
+				} else {
+					__xawa.sendData(JSON.stringify(json_data));					
+				}					
+			} catch (err) {
+				throw 'Exception: Given object cannot be transformed to JSON object!';
 			}
 		},
 
 		// invite
-		invite: function (jid, appConfig, onAcceptCallback, onRefuseCallback) {
+		invite: function (jid, appConfig, callbacks) {
 			try {
 				__xawa.sendInvite(jid === undefined ? __xawa.getRecipient() : jid, JSON.stringify(appConfig));
-				//sleep(10000);
-				var tstint = setInterval(function() {
-				var result = __xawa.getInvitationAnswer();
-				if (result == true && onAcceptCallback !== undefined) {
-					onAcceptCallback();
-					clearInterval(tstint);
-				} else if (onRefuseCallback !== undefined) {
-					onRefuseCallback();
-					clearInterval(tstint);
+				// register callbacks on 'events'
+				if (callbacks !== undefined) {
+					if (callbacks.onAccept !== undefined)
+						onInvitationAccept = callbacks.onAccept;
+					if (callbacks.onRefuse !== undefined)
+						onInvitationRefuse = callbacks.onRefuse;
 				}
-				}, 1000);
-				
-				/*var timeout = 10000;
-				var timer;
-				var answer = (function __getInvitationAnswer() {
-					if (timeout == 0) {
-						clearTimeout(timer);
-						return undefined;
-					}
-					if (__xawa.invitationAnswer != '') {
-						clearTimeout(timer);
-						return __xawa.invitationAnswer;
-					}
-					timeout--;
-					timer = setTimeout(function () { __getInvitationAnswer() }, 30000);
-				})();
-
-				if (answer === undefined) {
-					alert('xxxx');
-				}*/
 			} catch (err) {
 				
 			}
 		},
+		
+		//
+		/*negotiateGame: function() {
+			try {
+				__xawa.sendData(JSON.stringfy({ negotiate: true, player: 2 }));
+			} catch(err) {
+				alert(err);
+			}
+		},*/
 	};
 	
 	var X = new _x();
@@ -104,6 +149,6 @@
 	X._init();
 
 	// remapping of the original 'xawa' object in 'window' scope
-	window.xawa = X;//new _x();
+	window.xawa = X;
 
 })(this,this.document);
