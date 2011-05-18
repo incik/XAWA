@@ -1,16 +1,17 @@
 /*
  * XAWA Library
  *
- * Copyright 2010 - 2011, Tomáš Vaisar
+ * Created by Tomáš Vaisar, 2011
  * tomas.vaisar@gmail.com, xvaisa00@stud.fit.vutbr.cz
  *
- * Released under GPL
+ * Released under GNU/LGPL
  */
 
 /*
  * Following event are fired from browser (XAWA plugin window)
  */
 function onApplicationReady() {
+	alert("If this message shows up (which it shouldn't), please right click in the window and hit 'Reload'. This message shouldn't be displayed again. If it is ... I'm doomed.")
 	throw('Exception: onApplicationReady not implemented!');
 }
 
@@ -25,10 +26,6 @@ function onInvitationRefuse() {
 function onMessageReceived(msg) {
 	throw('Exception: onMessageReceived not implemented!');
 }
-
-/*function onDataAccepted() {
-	throw('Exception: onDataRecieved not implemented!');
-}*/
 
 function onDataReceived(data) {
 	throw('Exception: onDataReceived not implemented!');
@@ -54,33 +51,19 @@ function onSessionLeave() {
 			} catch (err) {
 			// if initialization fails, there's no reason to continue
 				window.stop();
-				throw (err);//'Exception: XAWA initialization failed!' + err;
+				throw ('Exception: XAWA initialization failed!');
 			}
 		},
 
 		//
-		getVersion: function () {
-			try {
-				return __xawa.getXawaVersion();
-			} catch (err) {
-				throw err;
-			}
-		},
+		version: (function () {
+			return __xawa.getXawaVersion();
+		})(),
 
 		// read-only property
 		recipient: (function () {
 			return __xawa.getRecipient();
 		})(),
-
-		/*
-		getMessage: function (callback) {
-			try {
-				if (callback !== undefined)
-					onMessageReceived = callback;
-			} catch(err) {
-				alert(err);
-			}
-		},*/
 
 		//
 		sendMessage: function(message, options) {
@@ -92,16 +75,9 @@ function onSessionLeave() {
 					__xawa.sendMessage(message);
 				}
 			} catch (err) {
-				alert(err);
+				throw ('Exception: Message could not be sent! ' + err);
 			}
 		},
-
-		/*
-		getData : function(callback) {
-			if (callback !== undefined) {
-				onDataReceived = callback;
-			}
-		}*/
 
 		//
 		sendData: function (json_data, options) { //onDataAcceptCallback) {
@@ -113,7 +89,7 @@ function onSessionLeave() {
 					__xawa.sendData(JSON.stringify(json_data));					
 				}					
 			} catch (err) {
-				throw 'Exception: Given object cannot be transformed to JSON object!';
+				throw ('Exception: Given object cannot be transformed to JSON object!');
 			}
 		},
 
@@ -129,18 +105,18 @@ function onSessionLeave() {
 						onInvitationRefuse = callbacks.onRefuse;
 				}
 			} catch (err) {
-				
+				throw ('Exception: Invitation could not be sent! ' + err);
 			}
 		},
 		
-		//
-		/*negotiateGame: function() {
+		// leave
+		leave: function () {
 			try {
-				__xawa.sendData(JSON.stringfy({ negotiate: true, player: 2 }));
-			} catch(err) {
-				alert(err);
+				__xawa.leave();
+			} catch (err) {
+				throw ('Exception: Session could not be leaved! ' + err);
 			}
-		},*/
+		},		
 	};
 	
 	var X = new _x();

@@ -1,0 +1,99 @@
+\chapter{Pou¾ívání modulu pro Jabbim}
+
+\section{Instalace}
+
+\subsection{Pou¾ití instalaèního skriptu}
+
+Pro u¾ivatele linuxových distribucí vycházejících z~distribuce Ubuntu je k~dispozici instalaèní skript \texttt{install\_jabbim.sh}. Ten provede následující kroky:
+\begin{enumerate} \itemsep 0pt
+	\item Z~repozitáøù Ubuntu nainstaluje kompletní prostøedí pro bìh komunikátoru Jabbim (tedy v¹ech potøebných knihoven)
+	\item Prostøednictvím \texttt{svn}\footnote{SVN neboli \emph{Subversion} je systém pro správu a verzování software, velmi vhodný pøi týmovém vývoji} stáhne nejnovìj¹í verzi komunikátoru
+	\item Z~webu Github\footnote{Github - \url{http://github.com}} stáhne nejnovìj¹í verzi XAWA
+	\item Nakopíruje zásuvný modul do slo¾ky s~komunikátorem
+\end{enumerate}
+
+Nyní je Jabbim s~podporou XAWA pøipraveno ke spu¹tìní pomocí pøíkazù uvedených v~ukázce \ref{use_run}.
+
+\begin{figure}[h]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+$ cd jabbim
+$ ./jabbim.sh
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Posloupnost pøíkazù pro spu¹tìní programu Jabbim}
+  \label{use_run}
+\end{figure}
+
+Testováno na Ubuntu 10.10 x64 a Kubuntu 11.04 x86.
+
+\subsection{Ruèní instalace}
+
+V~pøípadì potøeby ruèní instalace je potøeba provést následující kroky:
+
+	\begin{enumerate} \itemsep 0pt
+	    \item Stáhnout a nainstalovat Jabbim\footnote{Intrukce pro instalaci jsou k~dispozici na \url{http://dev.jabbim.cz/jabbim/}}.
+		\item Stáhnout z~\url{https://github.com/incik/XAWA/zipball/master/} nejnovìj¹í verzi XAWA.
+		\item Sta¾ený archív rozbalit a obsah slo¾ky \texttt{plugins/jabbim} zkopírovat do slo¾ky \\ \texttt{cesta-k-jabbbim/plugins}
+	\end{enumerate}
+
+\subsection{Aktivace modulu}
+
+Jak po instalaci pomocí skriptu, tak po ruèní instalaci modulu do adresáøe \texttt{plugins} je tøeba modul je¹tì aktivovat v~nastavení programu. Je tøeba provést následující posloupnost krokù:
+
+\begin{enumerate} \itemsep 0pt
+	\item V~hlavním menu programu oveøít nabídku \textbf{Akce} a vybrat polo¾ku \textbf{Nastavení}.
+	\item V~levé nabídce Vybrat kategorii \textbf{Roz¹íøení}.
+	\item V~pravé nabídce v~kategorii \textit{Rùzné} za¹krtnout \textbf{XAWA Plugin}.
+	\item Kliknout na tlaèítko \textbf{Ulo¾it}
+\end{enumerate}
+
+Nyní je tøeba se odhlásit a znovu pøihlásit. XAWA plugin bude naèten a bude pøipraven k~pou¾ití.
+
+\section{Pøíklad pou¾ívání modulu}
+
+Po kliknutí pravým tlaèítkem na u¾ivatele, který má té¾ nainstalovaný XAWA plugin se v~kontextovém menu objeví polo¾ka \uv{Open XAWA window} (viz obrázek \ref{use_open}).
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=80mm]{fig/openxawa.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Kontextové menu pro u¾ivatele, který má nainstalovaný XAWA plugin}
+  \label{use_open}
+\end{figure}
+
+Po kliknutí na tuto polo¾ku je otevøeno hlavní okno pluginu, prozatím prázdné. Po kliknutí na tlaèítko \textbf{Refresh} je do nìj naèten \emph{rozcestník} umo¾òující výbìr aplikace.
+
+Je-li u¾ivatel pozván k~pou¾ívání nìjaké aplikace, je mu zobrazeno dialogové okno s~dotazem, zda chce pozvání pøíjmout (viz obrázek \ref{use_invite}). Pokud klikne na \uv{Ano}, otevøe se okno s~aplikací, do které je zván.
+
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=80mm]{fig/invite_1.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Dialogové okno vyvolané pøi doruèení pozvánky do aplikace}
+  \label{use_invite}
+\end{figure}
+
+\chapter{Obsah CD}
+
+\section{Adresáøová struktura}
+
+Stromové zobrazení adresáøové struktury na pøilo¾eném CD.
+
+\begin{itemize}
+	\item \textbf{apps} -- slo¾ka obsahující hru Dáma a v¹echny vytvoøené testovací aplikace
+	\item \textbf{docs} -- slo¾ka obsahující technickou zprávu ve formátu PDF a její zdrojové soubory pro \LaTeX
+    \item \textbf{plugins} -- slo¾ka obsahující zásuvný modul pro Jabbim
+    \item README -- soubor s~instrukcemi pro instalaci zásuvného modulu
+\end{itemize}
+
+%\chapter{Manual}
+%\chapter{Konfigraèní soubor}
+%\chapter{RelaxNG Schéma konfiguraèního soboru}
+%\chapter{Plakat}
+

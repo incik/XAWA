@@ -1,0 +1,1137 @@
+%=========================================================================
+% (c) Tomá¹ Vaisar, 2011
+
+\chapter{Úvod}
+
+%\section{Cíle a motivace}
+
+Cílem této práce je navrhnout aplikaèní programovací rozhraní (API), které bude umo¾òovat jednoduchou tvorbu aplikací postavených na XHTML a ECMAScriptu, které spolu budou komunikovat pomocí otevøeného komunikaèního prokotolu XMPP. Toto API bude umo¾òovat, ¾e aplikace budou pøenosné mezi rùznými internetovými komunikátory\footnote{Aplikace umo¾òující textovou (èi hlasovou nebo obrazovou) komunikaci prostøednictvím Internetu}. Pro ka¾dý komunikátor bude nutno vytvoøit zásuvný modul\footnote{Doplnìk aplikace roz¹iøující její funkcionalitu}, který bude dané API implementovat a umo¾ní tak bìh tìchto aplikací v~daném komunikátoru. Samotné aplikace v¹ak ji¾ nebude nutno jakkoliv modifikovat.
+
+%Souèástí této práce je také javascriptová knihovna, která zapouzdøuje nìkteré operace, které se pøi pou¾ití API pou¾ívají a dávají programátorovi mo¾nost pohybovat se na vy¹¹í úrovni abstrakce. Její vyu¾ívání není vy¾adováno, ale citelnì ulehèuje práci.
+
+\vspace*{5pt}
+
+Kapitola \ref{chapCharakteristika} diskutuje aktuální stav v~oblasti spolupráce protokolu XMPP a ECMAScriptu. Zkoumá existující knihovny umo¾òující souèasné pou¾ití tìchto dvou technologíí a projekty, které na tomto principu pracují.
+
+V~kapitole \ref{chapTechnologie} jsou probírány pou¾ité technologie, pøedev¹ím komunikaèní protokol XMPP, skriptovací jazyk JavaScript a jádro pro tvorbu webových prohlí¾eèù WebKit.
+
+Kapitola \ref{chapNavrh} pojednává o~návrhu aplikaèního programovacícho rozhraní, které budou budoucí aplikace vyu¾ívat. Zabývá se pøedev¹ím návrhem formátu XML zpráv, pomocí kterých spolu budou aplikace komunikovat.
+
+V~kapitole \ref{chapImplementace} je probírána výsledná implementace navr¾eného systému. Obsahuje té¾ popis funkcionality, kterou výsledné API poskytuje.
+
+V~rámci vývoje byly vytvoøeny i testovací aplikace, které demonstrující funkcionalitu API. Tyto aplikace jsou detailnìji rozebírány v~kapitole \ref{chapTstApps}.
+
+Závìreèná kapitola \ref{chapZaver} rozebírá mo¾nosti budoucích roz¹íøení souèasné implementace.
+
+%==============================================================================
+
+\chapter{Charakteristika souèasného stavu}
+\label{chapCharakteristika}
+
+Tato kapitole se zabývá charakteristikou aktuálního stavu v~oblasti spolupráce protokolu XMPP a~\mbox{ECMAScriptu}. V~souèasné dobì existuje nìkolik projektù, které zprostøedkovávají komunikaci dvou a více u¾ivatelù prostøednictvím protokolu XMPP v~prostøedí webového prohlí¾eèe. Mezi nejznámìj¹í projekty patøí Meebo\footnote{Meebo -- \url{http://www.meebo.org/}}, Jappix\footnote{Jappix -- \url{http://www.jappix.com/}}, Google Talk\footnote{Google Talk -- \url{http://www.google.com/talk/}} a Facebook Chat\footnote{Facebook Chat -- \url{http://www.facebook.com/}}. Ve v¹ech pøípadech dostane u¾ivatel k~dispozici rozhraní, které napodobuje prostøedí klasického internetového komunikátoru.
+
+Tyto slu¾by v¹ak nenabízí mo¾nost vytvoøit na jejich základì vlastní aplikaci. K~tomuto úèelu je vytvoøeno nìkolik knihoven pro JavaScript. Ty umo¾òují vytvoøení webových aplikací, které komunikují prostøednictvím XMPP. Patøí mezi nì napøíklad knihovna JSJaC\footnote{JSJaC -- \url{http://blog.jwchat.org/jsjac/}}, Strophe\footnote{Strophe -- \url{http://strophe.im/}}, xmpp4js\footnote{xmpp4js -- \url{http://xmpp4js.sourceforge.net/}} nebo dojox.xmpp\footnote{dojox.xmpp -- \url{http://dojotoolkit.org/reference-guide/dojox/xmpp.html}}.
+
+Tyto knihovny v~sobì buï implementují funkcionalitu celého XMPP klienta, nebo ve~skuteènosti odesílají zprávy na server, který zprostøedovává XMPP komunikaci za~nì. První pøístup je nevhodný z~pohledu nároènosti na~zpracování XMPP komunikace v~rámci JavaScriptu. Druhý pøístup mù¾e být nevhodný z~hlediska bezpeènosti, proto¾e server pøeposílající zprávy si mù¾e tyto zprávy ukládat nebo s~nimi jinak manipulovat (zále¾í na implementaci knihovny).
+
+U~vìt¹iny z~tìchto knihoven bohu¾el chybí pou¾itelná dokumentace.
+
+%Meebo je slu¾ba, která nabízí komunikaci pomocí XMPP, ICQ, MSN a dal¹ích protokolù. Tento projekt bohu¾el není otevøený (tzn. nejsou k dispozici zdrojové kódy), tak¾e o tom, jak vnitønì funguje se dá pouze polemizovat. Nejpravdìpodobnìji je v¹ak komunikace mezi v¹emi tìmito protokoly realizována pomocí tzv. XMPP transportù (viz \ref{xmpp_transports}).
+
+%Naproti tomu Jappix je èistì open-source projekt, který funguje spí¹e jako platforma ne¾ slu¾ba. Je mo¾né si stáhnout zdrojové kódy, dle svých potøeb si je upravit, pøípadnì i vymìnit grafiku a takto modifikovaný Jappix spustit na vlastním serveru, kde mù¾e napøíklad zastávat funkci firemního komunikátoru. Narozdíl od uzavøeného Meebo lze o Jappixu zjistit to, ¾e je jeho funkcionalita zalo¾ena na javascriptové knihovnì JSJaC\footnote{JSJaC -- \url{http://blog.jwchat.org/jsjac/}}, která pro nìj zaji¹»uje komunikaci mezi u¾ivateli prostøednictvím XMPP protokolu.
+
+\vspace*{5pt}
+
+Tato práce øe¹í jiný pøístup. Místo pøiná¹ení XMPP do webu, pøíná¹í web do XMPP. V~praxi si pod tím lze pøestavit, ¾e bude vytvoøen zásuvný modul, který umo¾ní v~prostøedí XMPP komunikátoru spustit webovou aplikaci, která bude roz¹íøena o~mo¾nost komunikace pomocí tohoto protokolu. Lze tak vyu¾ít ji¾ existující funcionality komunikátoru. Tím odpadá nutnost implementovat celou logiku XMPP komunikace a lze se soustøedit na tvorbu samotné aplikace. %Tento pøístup tedy pøiná¹í napøíklad mo¾nost hrát s pøáteli hry pøímo prostøednictvím svého oblíbeného komunikaèního programu bez nutnosti se registrovat na jiné slu¾bì.
+
+%==============================================================================
+
+\chapter{Pou¾ité technologie}
+\label{chapTechnologie}
+
+Tato kapitola se zabývá technologiemi, které jsou v~této práci vyu¾ity. Jedná se pøedev¹ím o~popis komunikaèního protokolu XMPP, jazyka JavaScript a jeho formátu pro serializaci dat -- JSON. V~závìru je popsán WebKit -- open-source jádro pro webové prohlí¾eè, které bude slou¾it k~zobrazování a bìhu aplikací vyu¾ívajících navrhované API.
+
+\section{XMPP}
+XMPP neboli Extensible Messaging and Presence Protocol (do èe¹tiny pøelo¾itelné jako \uv{Roz¹iøitelný protokol pro zasílání zpráv a informací o~pøítomnosti u~poèítaèe}) je otevøený standardizovaný protokol pro zasílání zpráv (anglicky \emph{instant messaging}), textovou komunikaci více u¾ivatelù zároveò a v~rámci této komunikace napøíklad také pro pøenos zvuku a~videa.
+
+Vznikl v~roce 1999 ve snaze vytvoøit otevøenou technologii pro textovou komunikaci v~rámci Internetu, která by poskytovala alternativu k~existujícím uzavøeným protokolùm (jako napøíklad ICQ nebo MSN). K~tìmto uzavøeným protokolùm toti¾ neexistuje ¾ádná oficiální specifikace a proto je velice obtí¾né vytvoøit program, který pomocí takového protokolu komunikuje. V~pøípadì ICQ je dokonce vytvoøení takového programu poru¹ením licenèních podmínek a mù¾e být trestnì stíháno.
+
+Pro XMPP se bì¾nì se pou¾ívá název \textbf{Jabber}, nicménì se jedná o~registrovanou obchodní znaèku firmy Jabber Inc., tudí¾ v~oficiálních dokumentech (napøíklad na stránkách poskytovatelù XMPP slu¾eb) se toto oznaèení pøíli¹ èasto nevyskytuje.
+
+\subsection{Hlavní pøednosti}
+Hlavními pøednostmi XMPP oproti jiným protokolùm (napø. proti protokolu OSCAR, který vyu¾ívá slu¾ba ICQ) jsou:
+
+\begin{itemize}
+	\item \textbf{otevøenost} -- Na protokol se nevztahuje ¾ádná komerèní licence a je ho tedy mo¾né pou¾ívat k~libovolným úèelùm a dokonce ho dle vlastních potøeb modifikovat.
+	\item \textbf{standardizovanost} -- Organizace IETF\footnote{IETF (Internet Engeneering Task Force) -- \url{http://www.ietf.org/}} prohlásila protokol za standard a ten byl popsán v~RFC 3920\footnote{RFC 3920 -- \url{http://www.ietf.org/rfc/rfc3920.txt}} a RFC 3921\footnote{RFC 3921 -- \url{http://www.ietf.org/rfc/rfc3921.txt}}.
+	\item \textbf{bezpeènost} -- Protokol umo¾òuje uzavøít sí» vùèi jiným sítím, díky èemu¾ mohou u¾ivatelé komunikovat napø. pouze v~rámci jedné domény (\texttt{frantisek@firma.cz} mù¾e komunikovat s~\texttt{josef@firma.cz}, ale ne s~\texttt{antonin@jinafirma.cz}). Navíc do~samotného jádra protokolu je zaneseno ¹ifrování pomocí technologie SASL\footnote{Simple Authentication and Security Layer -- \url{http://tools.ietf.org/html/rfc4422}} a kryptografického protokolu TLS\footnote{The Transport Layer Security (TLS) Protocol -- \url{http://tools.ietf.org/html/rfc5246}}.
+	\item \textbf{decentralizovanost} -- Podobnì jako napøíklad u~e-mailu neexistuje ¾ádný jediný øidící server, ke kterému by se museli v¹ichni u¾ivatelé pøihla¹ovat. Ka¾dý si mù¾e na~svùj poèítaè nainstalovat XMPP server a dát ho k~dispozici u¾ivatelùm. V~kombinaci s~mo¾ností uzavøít sí» vùèi ostatním sítím je tedy XMPP takøka ideálním kandidátem napøíklad pro interní komunikaèní øe¹ení v~rámci firem.
+	\item \textbf{roz¹iøitelnost} -- Pokud chce nìkdo vyu¾ít protokol v~rámci svého projektu, ale nedostaèuje mu existující funkcionalita, lze komunikaci obohatit o~zprávy vlastního typu. Je èistì na klientské aplikaci, jak se zprávami nalo¾í (jak je zpracuje). Server ani protokol je nijak neomezují.
+\end{itemize}
+
+Mezi dal¹í výhody patøí napøíklad to, ¾e u¾ivatel mù¾e být pøihlá¹en na více místech najednou. Kam u¾ivateli posílat zprávy pak server rozhoduje podle toho, u~kterého pøipojení má u¾ivatel nastavenou vy¹¹í prioritu\footnote{Priorita -- èíselná hodnota urèující preferované spojení, zprávy jsou ve výchozím chování doruèovány spojení s~vy¹¹í prioritou}. Protokol také podporuje vzdálené ovládání pøipojených komunikátorù pomocí technologie XML-RPC\footnote{XML-RPC -- vzdálené volání procedur pomocí technologie XML skrz protokol HTTP. Více viz \url{http://www.xmlrpc.com/}.} (toto vzdálené ovládání v¹ak musí být v~cílovém klientovi explicitnì povoleno), èeho¾ lze vyu¾ít napøíklad k~pøesmìrování dosud nepøeètených zpráv do jiného komunikátoru.
+
+Dal¹í vlastností je podpora komunikace více u¾ivatelù najednou (tzv. \emph{MUC -- Multi-user conference}), která vypadá obdobnì jako komunikace prostøednictvím protokolu IRC. U¾ivatelé mají k~dispozici \emph{místnost}, ve které probíhá jejich hromadná konverzace. Tato místnost mù¾e být veøejná (tedy pøístupná pro koholiv) nebo chránìná heslem, které je vy¾adováno pro vstup do místnosti. Ve výchozím stavu se zprávy odesílají v¹em u¾ivatelùm. Pokud chtìjí dva u¾ivatelé \emph{¹eptat} (tedy komunikovat spolu izolovanì od ostatních), je mezi nimi vytvoøena zvlá¹tní místnost.
+
+\subsection{JID}
+Ka¾dý u¾ivatel je jednoznaènì indentifikován pomocí tzv. JID -- \emph{Jabber Identificator} skládajícího se ze~tøí èástí:
+
+\begin{itemize}
+	\item \textbf{u¾ivatelské jméno} -- pøezdívka, èi jméno u¾ivatele(unikátní pro daný server)
+	\item \textbf{server} -- název serveru, na kterém je u¾ivatel zaregistrován (napø. \texttt{jabbim.cz})
+	\item \textbf{resource} -- identifikátor prostøedku, pomocí nìho¾ u¾ivatel pøipojen (nejèastìji název poèítaèe nebo komunikaèního programu, který u¾ivatel aktuálnì pou¾ívá)
+\end{itemize}
+
+Právì díky tomu, ¾e je u¾ivatelovo spojení se serverem identifikováno i prostøedkem, pomocí kterého je pøihlá¹en, je mo¾né, aby byl jeden u¾ivatel pøihlá¹en najednou z~více míst. Pro server jsou \texttt{incik@jabbim.cz/jabbim} a \texttt{incik@jabbim.cz/htcdesire} dvì rùzná spojení jednoho u¾ivatele. Tato spojení mezi sebou dokonce mohou vést normální konverzaci.
+
+Pokud je pøi komunikaci v~JID uveden \emph{resource} a u¾ivatel je pøihlá¹en z~více míst, je mo¾né komunikovat s~tímto spojením bez ohledu na to, zda má u¾ivatel u~jiného spojení nastavenou vy¹¹í prioritu. Pokud není \emph{resource} uveden, je zpráva doruèena spojení s~nejvy¹¹í priotitou.
+
+\subsection{Popis XMPP zpráv}
+Komunikace probíhá formou výmìny zpráv ve formátu XML, které jsou snadno èitelné nejen pro poèítaè, ale i pro lidi.
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<message xmlns='jabber:client' from='incik@jabbim.cz/jabbim'
+    xml:lang='en' to='johntestovic@jabbim.cz/jabbim' type='chat'
+    id='H_329'>
+    <body>ahoj!</body>
+</message>
+\end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázková zpráva typu \texttt{message}}
+  \label{ukazkova_msg}
+\end{figure}
+
+Kromì zpráv typu \texttt{message} uvedeného v~ukázce \ref{ukazkova_msg} jsou dále vyu¾ívány zprávy typu \texttt{IQ} (viz ukázka \ref{ukazkova_iq}). Ty jsou urèeny primárnì pro komunikaci typu \emph{dotaz -- odpovìd}. Typ této zprávy je identifikován pomocí atributu \texttt{type}, který mù¾e nabývat následujících hodnot:
+
+\begin{enumerate}
+	\item \textbf{set} -- pou¾ívá se pøi zasílání dotazù, které vy¾adují nìjaké parametry
+	\item \textbf{get} -- pou¾ívá se u~dotazù, které nevy¾adují ¾ádné parametry
+	\item \textbf{result} -- odpovìï zasílaná v~pøípadì úspì¹ného vykonání po¾adovaného dotazu
+	\item \textbf{error} -- odpovìï zasílaná, pokud dojde k~chybì pøi zpracování dotazu. Obsahuje pùvodní dotaz a chybové hlá¹ení (kód chyby).
+\end{enumerate}
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq xmlns='jabber:client' type='result' id='bind_1' >
+    <bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>
+        <jid>incik@jabbim.cz/jabbim</jid>
+    </bind>
+</iq>
+\end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázková zpráva typu \texttt{IQ}}
+  \label{ukazkova_iq}
+\end{figure}
+
+Ka¾dá XMPP zpráva dále povinnì obsahuje následující atributy:
+\begin{itemize}
+	\item \textbf{xmlns} -- urèuje jmenný prostor, do kterého zpráva patøí (ty slou¾í k~urèení toho, pro jakou slu¾bu se daná zpráva pou¾ívá a ke kontrole, zda je zaslaná zpráva validní)
+	\item \textbf{type} -- urèuje typ zprávy, na základì kterého aplikace pøíjemce urèuje. Kromì \texttt{chat}, vyu¾ívaného pro konverzace, lze pou¾ít napøíklad typ \texttt{message}, které se chovájí podobnì jako e-mailové zprávy (konkrétní chování se li¹í dle pou¾ívaného komunikátoru).
+	\item \textbf{id} -- ka¾dá zaslaná zpráva má svùj jednoznaèný èíselný identifikátor, díky kterému je mo¾né napøíklad zjistit, která zpráva je reakcí na kterou
+\end{itemize}
+
+Pro zprávy typu \texttt{message} jsou také povinné parametry:
+\begin{itemize}
+	\item \textbf{from} -- urèuje, kým byla zpráva odeslána
+	\item \textbf{to} -- urèuje, komu je zpráva urèena
+\end{itemize}
+
+Dal¹í atributy a elementy zprávy jsou volitelné. Zpráva mù¾e obsahovat text, data ve formì obrázku nebo informaci o~tom, ¾e druhý u¾ivatel právì pí¹e zprávu.
+
+\subsection{XMPP transporty}
+\label{xmpp_transports}
+Zajímavou vlastností XMPP je mo¾nost komunikovat se sítìmi pou¾ívajícími jiné protokoly (napø. ICQ) pomocí takzvaných transportù. Narozdíl od komunikátorù, který doká¾í komunikovat v~rámci více protokolù zároveò, fungují transporty na úrovni serveru. U¾ivatel se pøihlásí k~bránì, která je pøipojená napøíklad k~ICQ serveru. U¾ivatel poté pomocí standardního XMPP komunikuje s~bránou a ta komunikuje s~ICQ serverem pomocí jeho protokolu (OSCAR).
+
+%Velkou výhodou tohoto pøístupu je hlavnì fakt, ¾e
+Registrace k~bránì je svazaná s~úètem u¾ivatele a ne s~jeho komunikátorem. Tudí¾ kdekoliv se u¾ivatel pøihlásí svým XMPP úètem, mù¾e mít k~dispozici své ICQ èi MSN kontakty, své e-maily, zprávy ze sociální sítì Twitter apod.
+
+\subsection{Souèasné vyu¾ití}
+Protokol XMPP je ovìøený díky nasazení v~aplikacích, které vyu¾ívají dennì miliony lidí. V~souèasné dobì jej vyu¾ívá spoleènost Google pro svoji aplikaci Google Talk. Ta umo¾òuje primárnì komunikaci prostøednictvím XMPP v~rámci webového prohlí¾eèe. Ten kromì zasílání zpráv podporuje i pøenos hlasu a videa.
+
+Dal¹í aplikace, která v~nedávné dobì zaèala XMPP vyu¾ívat, je sociální sí» Facebook resp. její slu¾ba \emph{Facebook chat} \cite{FBXMPP}. Tato komunikaèní sí» je bohu¾el uzavøena vùèi ostatním sítím, co¾ v~praxi znamená, ¾e èlovìk mù¾e pro Facebook chat pou¾ívat svùj oblíbený XMPP komunikátor a psát si tedy se v¹emi pøáteli v~rámci sítì Facebook, ale nemù¾e si psát napøíklad s~u¾ivatelem \texttt{johndoe@jabber.org}. Pokud by Facebook se svými více ne¾ 500 miliony u¾ivatelù \cite{FBStats} svoji sí» otevøel vùèi ostatním sítím, stalo byl se XMPP nejroz¹íøejnìj¹ím komunikaèním prostøedkem v~rámci Internetu (vyjma e-mailu).
+
+%http://xmpp.org/about-xmpp/
+
+%======================================
+
+\section{ECMAScript}
+
+V~roce 1995 vyvinul Brendan Eich ve firmì Netscape programovací jazyk Mocha. Cílem bylo umo¾nit lidem, kteøí nejsou tak sbìhlí v~programování (cíleno pøedev¹ím na webdesignéry), o¾ivit své webové stránky pomocí jednoduchých animací a~dát jim mo¾nost alespoò èásteènì ovlivòovat funkcionalitu -- napøíklad chování webových formuláøù. Alternativou v~té dobì byla napøíklad mo¾nost tvoøit tzv. Java Applety -- programy napsané v~jazyce Java, které bì¾í v~rámci internetového prohlí¾eèe jako prvek stránky. Tyto applety v¹ak byly velice nároèné na výkon poèítaèe, navíc vy¾adovaly znalost programovacího jazyka Java.
+
+Bìhem následujícího pùl roku byl jazyk Mocha pøejmenován na LiveScript a pozdìji po oznámení spolupráce mezi firmami Netscape a Sun Microsystems byl pøejmenován na JavaScript (pøesto¾e nemá s~programovacím jazykem Java nic spoleèného). První oficiální implementace JavaScriptu byla v~internetovém prohlí¾eèi Netscape Navigator 2.0. V~roce 1996 se objevila jeho implementace i v~prohlí¾eèi Internet Explorer 3.0 od spoleènosti Microsoft -- jejich verze se jmenovala JScript. Nicménì vzhledem k~odli¹nému pøístupu k~DOM\footnote{DOM (Document Object Model) tedy \emph{objektový model dokumentu} je objektová reprezentace struktury XML dokumentu.} spolu nebyly tyto dvì verze zcela kompatibilní.
+
+Proto se tého¾ roku (1996) organizace ECMA rozhodla JavaScript standardizovat. Výsledným produktem byl jazyk \textbf{ECMA-262}. Tento název je v¹ak pro bì¾nou praxi ponìkud nepraktický, proto se jazyk zaèal oznaèovat názvem \textbf{ECMAScript}. Ani tento název se v¹ak v~praxi pøíli¹ neujal -- sám Brendan Eich o~nìm prohlásil, ¾e zní jako jméno ko¾ní choroby \cite{InfoWorld}. Bì¾nì se tedy pou¾ívá název pùvodní oznaèení JavaScript, který i já budu ve zbytku práce pou¾ívat.
+
+\subsection{Vlastnosti}
+\label{js_vlastnosti}
+JavaScript je dynamicky typovaný plnì objektovì orientovaný skriptovací jazyk. Na rozdíl od jazykù jako je Java nebo C++ v¹ak není JavaScript zalo¾en na tøídách, ale na prototypech. Prototyp je pøedpis, který dává (podobnì jako tøída) vlastnosti objektu, který je podle nìho vytvoøen. Na rozdíl od tøídy má ale napøíklad tu výhodu, ¾e pokud zmìníme za bìhu programu prototyp, zmìní se zároveò s~tím i v¹echny objekty, které podle nìj byly vytvoøeny.
+
+V~souvislosti s~tím je tøeba zmínit, ¾e v~JavaScriptu je v¹e objekt. Øetìzec, pole, funkce (viz dále) a dokonce i èíslo je objekt. Má tedy atributy, ke kterým lze pøistupovat a metody, které lze volat\cite{MozNumber}. Konkrétnì u~èísla v¹ak nelze volit zcela klasický pøístup pro zápis volání metod, proto¾e kód v~ukázce \ref{js_42toString_err} zpùsobí syntaktickou chybu. Pokud za èíslem následuje teèka, interpret pøedpokládá, ¾e se jedná o~desetinné èíslo, a proto kdy¾ místo èísla narazí na znak \texttt{t}, zahlásí chybu. Jak toto chování obejít a zavolat metodu \texttt{toString()} nad èíslem \texttt{42} je vidìt v~ukázce \ref{js_42toString}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+42.toString();
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøíklad nesprávného volání metody \texttt{toString()} nad èíslem \texttt{42}}
+  \label{js_42toString_err}
+\end{figure}
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+42..toString(); // je té¾ mo¾ná varianta 42.0.toString()
+42 .toString(); // také regulérní zápis (pov¹imnìte si mezery)
+(42).toString(); // patrnì nejèitelnìj¹í zápis
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázka zpùsobù, jak zavolat metodu \texttt{toString()}na èíslem}
+  \label{js_42toString}
+\end{figure}
+
+JavaScript se dá oznaèit za \emph{multiparadigmatický} jazyk -- tedy jazyk umo¾òující rùzný pøístup k~zápisu programù a øe¹ení problémù.
+
+Primárnì u¾ívaný pøístup je imperativní, tedy zpùsob zápisu, na jaký jsme zvyklí z~programovacích jazyku jako je C++ nebo Java. JavaScript si ale propùjèuje i nìkteré vlastnosti \textbf{funcionálních} jazykù. Díky tomu, ¾e v¹e, i funkce, je objekt, tak je i funkci mo¾no pøiøadit do promìnné nebo ji vracet jako návratovou hodnotu jiné funkce.
+
+\vspace*{5pt}
+
+Dal¹ím prvkem známým pøedev¹ím z~funkcionálních jazykù jsou tzv. \textbf{vnoøené funkce} (anglicky \emph{nested functions}). Jak ji¾ název zlehka napovídá, jedná se o~funkce, které jsou definovány uvnitø jiných funkcí. Tyto pak mohou být volány pouze v~rámci funkcí, ve kterých jsou definovány a urèitým zpùsobem tak nahrazují privátní metody.
+Vnoøená funkce má navíc k~dispozici v¹echno, co bylo k~dispozici vnìj¹í funkci pøed jejím zavoláním i poté, co vnìj¹í funkce ukonèí svojí èinnost.
+
+\vspace*{5pt}
+
+Velkou devizou JavaScriptu jsou \textbf{anonymní funkce}. Ty (jak ji¾ název napovídá) nemají název a proto je nelze volat z~jiných èástí kódu ne¾ tam, kde jsou definovány. V~javascriptových aplikacích funkce velmi bì¾nì nevrací hodnotu, ale po¾aduje jako jeden z~parametrù název funkce, které pøedá výsledek své èinnosti a zavolá ji -- tzv. \emph{callback}\footnote{Callback -- kód (nebo refence na nìj), který se pøedává jako parametr jinému kódu.}. Proto¾e se v¹ak ve skuteènosti nepøedává název funkce, ale reference na ni, tak je mo¾né místo této reference pøímo zapsat anonymní funkci, která získaný výsledek zpracuje. Tímto zpùsobem se napøíklad zapisuje valná vìt¹ina kódu vyu¾ívajícího populární javascriptové knihovny \textbf{jQuery}\footnote{jQuery -- \url{http://jquery.com/}}.
+
+Jednoduchý kód bez anonymní funkce v~ukázce \ref{js_noAnonym} lze tedy snadno pøevést na funkènì ekvivalentní kód \ref{js_anonym}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+function resultHandler(result) { alert(result); }
+...
+doSomething(35.42, 18.5, resultHandler);
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{\emph{Callback} pøedaný referencí na funkci}
+  \label{js_noAnonym}
+\end{figure}
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+doSomething(35.42, 18.5, function(result) { alert(result); });
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{\emph{Callback} tvoøený anonymní funkcí}
+  \label{js_anonym}
+\end{figure}
+
+Pøi pou¾ití tohoto pøístupu odpadá potøeba definovat funkce, které se pou¾ijí jen jednou. Naopak pokud se pozdìji zjistí, ¾e je potøeba onu anonymní funkci volat znovu z~jiného místa, lze ji lehce upravit na pojmenovanou funkci a tu poté volat (viz ukázky \ref{js_noAnonym} a \ref{js_anonym}).
+
+\vspace*{5pt}
+
+\label{ifis}
+Zajímavostí jsou tzv. \textbf{samovolající se funkce} (anglicky \emph{self-invoking functions}). Jedná se o~funkce, jejich¾ definice je ihned následována operátorem volání funkce - \texttt{()}. Takovýto zápis zpùsobí, ¾e funkce je vykonána ihned poté, co interpret pøeète její definici. Pokud do své aplikace naèítáte externí javascriptovou knihovnu (napøíklad jQuery), pak je pravdìpodobné, ¾e bude definována pøibli¾nì tak, jak je uvedeno v~ukázce \ref{js_lib}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+(function (window, undefined) {
+    if (window.mojeTrida === undefined) {
+	    ...
+    }
+})(this);
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázka definice \emph{self-invoking} funkce}
+  \label{js_lib}
+\end{figure}
+
+Takovýto zápis má dvì výhody. Zaprvé bude knihovna pøipravena k~pou¾íti hned po naètení souboru, ve kterém je definována. Zadruhé si pov¹imnìte, ¾e aè je definice funkce uvedena se dvìma parametry, pøedáváme jí jen jeden. Díky tomu, ¾e parametr \texttt{undefined} nemá zadanou hodnotu, je tato hodnota takté¾ \emph{undefined} (obdoba \texttt{null} v~C/C++). Pokud uvnitø této funkce pou¾ijeme slovo \texttt{undefined}, nebudeme pracovat pøímo s~javascriptovou hodnotou \emph{undefined}, ale s~promìnnou \texttt{undefined}, její¾ hodnota je \emph{undefined}. Zní to jako zbyteènost, ale z~hlediska zabezpeèení správné funkcionality kódu je tento pøístup velmi vhodný. Pokud by toti¾ nìkdo ve zdrojovém kódu pøed naètením knihovny náhodou pou¾il zápis uvedený v ukázce \ref{js_asshole}, do¹lo by s~velmi vysokou pravdìpodobností k~nesprávnému chování. Proto¾e v¹ak v~lokálním kontextu (tedy uvnitø funkce) pøekrývají lokální promìnné ty, které jsou definovány na vy¹¹ích úrovních, je ná¹ kód \uv{v~bezpeèí}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+var undefined = true;
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázková zpráva typu \texttt{message}}
+  \label{js_asshole}
+\end{figure}
+
+%http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-262.pdf
+%https://developer.mozilla.org/en/JavaScript/About_JavaScript
+
+\subsection{JSON}
+%Rozhodl jsem se, ¾e pro pøenos dat mezi jednotlivými instancemi aplikací vyu¾ívajících API budu vyu¾ívat formát JSON.
+Tento jednoduchý textový formát, navr¾ený pro výmìnu dat mezi rùznými systémy, je souèástí JavaScriptu, která byla standardizovaná ve tøetím vydání standardu ECMA-262 v~roce 1999 \cite{JSONHP}.
+
+JSON podporuje datové typy \emph{øetìzec}, \emph{èíslo}, \emph{pole}, \emph{objekt}, \emph{pravda}, \emph{nepravda} a \texttt{null} -- tedy prázdná hodnota. Slo¾itìj¹í datové struktury v~nìm existují pouze dvì. Ji¾ zmínìný \emph{objekt} a \emph{seznam}. Objekt je reprezentován jako kolekce dvojic typu klíè -- hodnota. Seznam je kolekce prvkù oddìlených èárkou, uzavøených do hranatých závorek.
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+{
+    pokusnyObjekt: {
+        id: 1,
+        nazev: 'Pokusný objekt',
+        pole: [1,2,3,4],
+        data: {
+            command: 'unset',
+            arguments: null
+        },
+        notifikovat: true,
+        logovat: false,
+        potomek: null
+    }
+}
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøíklad reprezentace objektu v~JSON}
+  \label{js_json_obj}
+\end{figure}
+
+JSON je formát natolik univerzální, ¾e se v~souèasné dobì pou¾ívá nejen v~JavaScriptu, ale i v~dal¹ích programovacích jazycích, kde nahrazuje dal¹í èastou formu serializace objektù, a sice XML. Tento formát, který mìl být pùvodnì èitelný pro lidi (\emph{human-readable}) se toti¾ pomalu stává zbyteènì slo¾itým \cite{FatFree}.
+
+Aby bylo mo¾no ovìøit, zda je XML validní a bylo ho mo¾né správnì deserializovat, je tøeba pro nìj definovat XSD\footnote{XML Schema Definition (definice schématu XML) -- Dokument v~jazyce XML, který popisuje strukturu XML objektù}. To u~JSONu neplatí. Ten je èistì textový a~je na cílové aplikaci, jak s~daným objektem nalo¾í.
+
+Jak by vypadal ekvivalent ukázky \ref{js_json_obj} je vidìt na ukázce \ref{js_xml_dlouhe}. Lze namítnout, ¾e existuje krat¹í varianta zápisu (viz ukázka \ref{js_xml_kratke}), nicménì ta je na tom s~èitelností v~nìkterých pøípadech je¹tì o~nìco hùøe.
+% na by vypadal K vý¹e uvedenému pøíkladu by XML varianta vypadala následovnì:
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<pokusnyObjekt>
+    <id>1</id>
+    <nazev>Pokusný objekt</nazev>
+    <pole>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </pole>
+    <data>
+        <dataObject>
+            <command>unset</command>
+            <arguments />
+        </dataObject>
+    </data>
+    <notifikovat>true</notifikovat>
+    <logovat>false</logovat>
+    <potomek />
+</pokusnyObjekt>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázková zpráva typu \texttt{message}}
+  \label{js_xml_dlouhe}
+\end{figure}
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<pokusnyObjekt id='1' nazev='Pokusný objekt' notifikovat='true'
+    logovat='false'>
+    <pole>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </pole>
+    <data>
+        <dataObject command='unset' />
+    </data>
+</pokusnyObjekt>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázková zpráva typu \texttt{message}}
+  \label{js_xml_kratke}
+\end{figure}
+
+Co se datové velikosti týèe, tak je JSON ve vìt¹inì pøípadù úspornìj¹í bez ohledu na formu zápisu XML.
+
+%======================================
+
+\section{WebKit}
+WebKit je open-source jádro pro webové prohlí¾eèe. Byl vytvoøen firmou \mbox{Apple~Inc.} na základì jader KHTML a KJS, co¾ byla pùvodnì jádra (vykreslovací, respektive javascriptové) pro prohlí¾eè Konqueror, patøící do projektu KDE\footnote{KDE - K~Desktop Environment - populární grafické u¾ivatelské rozhraní pro operaèní systémy unixového typu (pøedev¹ím GNU/Linux a FreeBSD)}. Firma vyu¾ila tyto technologie jako základ pro svùj prohlí¾eè Safari. V~roce 2005 jej uvolnila jako open-source projekt\cite{WebKitGoesOpenSource}.
+
+Patrnì nejvìt¹í popularity dosáhl WebKit poté, co jej pou¾ila firma Google pro svùj webový prohlí¾eè Google Chrome\footnote{Google ve svém prohlí¾eèi Google Chrome jako javascriptové jádro pou¾ivá vlastní øe¹ení nazvané v8.}. Navíc v~souèasné dobì jeho implementaci nalezneme i~zaøízeních pou¾ívající operaèní systém Android, MeeGo a Symbian.
+
+Souèástí WebKitu (kterou ocení zejména vývojáøi webových stránek) je integrovaný nástroj \emph{Web Inspector}. Ten je obdobou velice populárního zásuvného modulu FireBug pro prohlí¾eè Mozilla Firefox. Mezi jeho hlavní schopnosti patøí:
+
+\begin{itemize}
+	\item \textbf{¾ivé zobrazování DOMu webové stránky} -- pokud dojde ve stránce ke zmìnì (pøesun prvku v~rámci DOMu nebo jen zmìna èásti textu), ve Web Inspektoru se tato zmìna ihned promítne
+	\item \textbf{vestavìný nástroj pro ladìní JavaScriptu} -- umo¾òuje krokovat skripty a provádìt zmìny v~javascriptovém kódu bez nutnosti znovu naèítat stránku
+	\item \textbf{sledování sítì} -- umo¾òuje sledovat odesílané/pøijímané HTTP hlavièky a analyzovat jejich obsah
+\end{itemize}
+
+%Web Inspector - ve verzi prohlí¾eèe Google Chrome
+
+K~dal¹ími výhodám pak napøíklad patøí podpora HTML5 a CSS3, co¾ jsou standardy, které jsou stále je¹tì ve fázi schvalování. Díky HTML5 je mo¾né kupøíkladu pøehrávat videa ze serveru YouTube bez nutnosti mít nainstalovaný Adobe Flash. YouTube toti¾ nabízí mo¾nost pøepnout pøehrávání do HTML5 módu, kdy se místo Flashe vyu¾ívá tagu \texttt{<video>} a o~vykreslování videa se stará samotný prohlí¾eè. Prozatím (v~kvìtnu 2011) se v¹ak jedná o~experimentální funcionalitu\cite{YoutubeHTML5}.
+
+Zajímavostí je také podpora technologie WebGL. Ta je roz¹íøením mo¾ností JavaScriptu o~mo¾nost vykreslovat interaktivní 3D grafiku pøímo v~oknì prohlí¾eèe za vyu¾ití výkonu grafické karty.
+
+\subsection{Roz¹íøení JavaScriptu}
+\label{addToJS}
+Pokud tvoøíme webový prohlí¾eè na základì WebKitu nebo vytváøíme aplikaci, která ho vyu¾ívá, máme k~dispozici mo¾nost roz¹íøit klientský JavaScript o~vlastní objekty. Toho lze vyu¾ít napøíklad k~implementaci netriviálních matematických výpoètù, jejich¾ provádìní by v~JavaScriptu trvalo nepøíjmenì dlouho. Tento objekt je vytvoøen v~rámci pùvodní aplikace, ve které pracujeme s~WebKitem, je tedy definován v~programovacím jazyce, ve kterém je tato aplikace vytváøena (tedy v~C++, Pythonu, \dots).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+class NaseTrida(QtCore.QObject):
+    def __init__(self):
+        QtCore.QObject.__init__(self)
+
+    @QtCore.pyqtSlot(result=str)
+    def pozdrav(self):
+        return 'Dobry den!'
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Definice tøídy, její¾ instance mù¾e být pøipojena do JavaScriptu}
+  \label{webkit_def}
+\end{figure}
+
+Pou¾ítím zápisu uvedného v~ukázce \ref{webkit_def} dostaneme k~dispozici tøídu, její¾ instanci lze zaregistrovat do JavaScriptu (respektive do javascriptového objektu \texttt{window}). Tato \emph{registraci} se dá provést pomocí metody \texttt{addToJavaScriptWindowObject}, která jako argumenty pøijímá instanci námi definované tøídy a textový øetìzec urèující, pod jakým jménem bude objekt z~JavaScriptu dostupný -- viz ukázka \ref{webkit_registrace}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+mainFrame.addToJavaScriptWindowObject('naseTrida', NaseTrida())
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Registrace vlastní tøídy do JavaScriptu}
+  \label{webkit_registrace}
+\end{figure}
+
+Takto do JavaScriptu pøidaný objekt je poté v~dokumentu (na¹í webové aplikaci) pøístupný pøes \texttt{window.\textbf{naseTrida}} a lze s~ním pracovat jako s~ka¾dý jiným objektem.
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+alert(naseTrida.pozdrav()); // zobrazí hlá¹ku s~textem 'Dobry den!'
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázka práce s~tøídou, o~kterou byl JavaScript programovì roz¹íøen}
+  \label{webkit_prace}
+\end{figure}
+
+Jak je z~ukázky \ref{webkit_prace} patrné, lze k~na¹emu objektu a jeho metodám pøistupovat i pomocí krat¹ího zápisu \texttt{naseTrida}, respektive \texttt{naseTrida.pozdrav()}, proto¾e objekt \texttt{window} se v~JavaScriptu uva¾uje jako implicitní jmenný prostor.
+
+%=============================================================================
+
+\chapter{Návrh}
+\label{chapNavrh}
+
+V~této kapitole je probíran návrh zpùsobu komunikace aplikací vyu¾ívajících navrhované API a princip fungování zásuvného modulu, který toto API implementuje.
+
+API je zkratka pro Aplikaèní programovací rozhraní (Application Programming Interface). Jedná se o~rozhraní, které definuje, jak pracovat s~urèitou kolekcí funkcí.
+
+Jak ji¾ bylo zmínìno v~úvodu, API má umo¾òovat tvorbu zásuvných modulù pro internetové komunikátory. Navrhovaný princip fungování celého systému je vidìt na obrázku \ref{navrh_schema}. Pomocí tìchto zásuvných modulù poté bude mo¾no spou¹tìt aplikace, které budou toto API vyu¾ívat (v~bì¾ném prohlí¾eèi taková aplikace nebude fungovat, proto¾e ten nebude mít k~dispozici XMPP funkce, které API implementuje).
+
+Díky tomu, ¾e vytváøené zásuvné moduly pro komunikátory implementují stejné API (funkce jsou stejnì pojmenované a mají ekvivalentní chování), nemusí pro ka¾dý komunikátor existovat zvlá¹tní verze aplikace.
+
+V~dal¹ím textu budou pou¾ívat oznaèení \textbf{XAWA} (XMPP API for Web Applications).
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=100mm]{fig/drawing.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Schematický návrh fungování celého systému}
+  \label{navrh_schema}
+\end{figure}
+
+\section{Umístìní aplikací}
+V~souèasné dobì se nepoèítá s~tím, ¾e by aplikace byly souèástí zásuvného modulu, který implementuje XAWA. Poèítá se s~umístením na lokálním, èi vzdáleném webovém serveru, odkud si ji v¹ichni u¾ivatelé naèítají. Toto øe¹ení má tu výhodu, ¾e v~pøípadì potøeby aktualizace aplikací staèí novou verzi nahrát jen na jedno místo a u¾ivatelé si ji stáhnou pøi prvním následujícím pøístupu na stránku. Odpadá tedy nutnost slo¾ité distribuce mezi u¾ivatele.
+
+\section{U¾ivatelské rozhraní}
+\label{navrh_ui}
+U¾ivatelské rozhraní bude tvoøeno oknem, které bude obsahovat webový prohlí¾eè. Funkcionalita tohoto prohlí¾eèe bude roz¹íøena o~podporu XAWA. Díky tomu bude umo¾nìno zobrazení a bìh webových aplikací, které toto API vyu¾ívají. Prohlí¾eè si bude udr¾ovací pomocí metody \texttt{addToJavaScriptWindowObject} udr¾ovat referenci na hlavní bod programu, díky nìmu¾ bude moci vyu¾ívat ji¾ existující funkcionalitu (posílání/pøíjem zpráv, pøístup k~informacím o~u¾ivatelích v~seznamu kontaktù, apod.).
+
+\section{Prùbìh komunikace}
+Celý systém by mìl fungovat následovnì:
+\begin{enumerate}
+	\item U¾ivatel A~spustí ve svém internetovém komunikátoru aplikaci vyu¾ívající XAWA.
+	\item Po spu¹tìní aplikace za¹le u¾ivateli B pozvánku k~pøipojení se do této aplikace.
+	\item U¾ivatel pøijme pozvánku a otevøe se mu okno s~aplikací, do které byl pozván.
+	\item Zaèíná komunikace.
+	\item U¾ivatelé pracují s~aplikací, ta odesílá zprávy (textové, èi datové) druhému u¾ivateli a jeho instance aplikace reaguje na pøíchozí zprávy.
+	\item Po ukonèení práce s~aplikací jedním  z~u¾ivatelù, je druhému u¾ivateli odeslána zpráva, informující ho, ¾e první u¾ivatel skonèil.
+\end{enumerate}
+
+%Tyto zprávy jsou ideální pro zasílání jednoduchých informací o .
+
+\section{Reakce na pøijaté zprávy}
+Po pøijetí zprávy je prohlí¾eèem (komponentou zásuvného modulu, která se stará o~zobrazování a bìh cílové aplikace) vyvolána událost, na kterou programátor mù¾e navázat vlastní funkcionalitu.
+
+\section{Formát XML zpráv}
+\label{formatXMLzprav}
+
+Jak ji¾ bylo zmínìno, protokol XMPP je roz¹iøitelný a je ho mo¾no obohatit o~vlastní typy zpráv, èi modifikovat existující. Této vlastnosti je vyu¾ito i v~této práci. Pro komunikaci bude API pou¾ívat modifkované zprávy typu \texttt{message} a pøedev¹ím zprávy typu \texttt{IQ}.
+
+\subsection{Zasílání pozvánek}
+Pokud chce u¾ivatel A~komunikovat s~u¾ivatelem B pomocí aplikace vyu¾ívající XAWA, je nutno o~tom u¾ivatele B informovat prostøednictvím pozvánky, která je odeslána z~oné aplikace. Taková pozvánka ve formì IQ zprávy (viz ukázka \ref{navrh_zasilani_pozvanek}) v~sobì poté obsahuje:
+\begin{enumerate}
+	\item Kdo koho zve
+	\item Název a URL aplikace, k~jejímu¾ pou¾ívání je u¾ivatel zván
+	\item Konfiguraèní objekt aplikace (viz oddíl \ref{konfObjekt})
+\end{enumerate}
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='set'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <session appName='Pokusná aplikace'
+            appUrl='http://xawa.vaisar.cz/apps/pokusna'>
+            <invite />
+            <configuration>
+                {__window : { width: 640, height: 480 }}
+            </configuration>
+        </session>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pozvánka do aplikace}
+  \label{navrh_zasilani_pozvanek}
+\end{figure}
+
+U¾ivatel A~poté èeká na odpovìï, na kterou má u¾ivatel B urèitý pøedem definovaný èas. Pokud u¾ivatel B v~zadaném èasovém intervalu neodpoví, aplikace pokraèuje jako by u¾ivatel B poznání odmítl.
+
+\subsection{Pøijímání/odmítání pozvánek}
+\label{zasilaniPozvanek}
+Je-li u¾ivateli B doruèena pozvánka do aplikace (objeví se dialogové okno s~informací o~tom, kdo u¾ivatele zve do které aplikace), mù¾e ji buï pøijmout nebo odmítnout. Pokud pozvánku pøijme, otevøe se mu okno s~aplikací a po jejím naètení se u¾ivateli A~ode¹le zpráva, ¾e je pøipraven ke komunikaci (ukázka \ref{navrh_pozvanka_accept}). Pokud pozvání odmítne, pouze se ode¹le zpráva o~tom, ¾e pozvání odmítl (ukázka \ref{navrh_pozvanka_reject}).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='result'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <session appName='Pokusná aplikace'
+            appUrl='http://xawa.vaisar.cz/apps/pokusna'>
+            <accept />
+        </session>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva o~pøijmutí pozvání do aplikace}
+  \label{navrh_pozvanka_accept}
+\end{figure}
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='result'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <session appName='Pokusná aplikace'
+            appUrl='http://xawa.vaisar.cz/apps/pokusna'>
+            <refuse />
+        </session>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva o~odmítnutí pozvání do aplikace}
+  \label{navrh_pozvanka_reject}
+\end{figure}
+
+\subsection{Výmìna zpráv}
+Pro mo¾nost vedení rozhovoru pøímo v~rámci kontextu aplikace je zavedena mo¾nost zasílání textových zpráv. Jsou k~dispozici dvì metody zasílání:
+\begin{enumerate}
+	\item zasílání klasických zpráv (napø. pokud chce autor aplikace, aby se zprávy ukládaly do historie konverzací)
+	\item zasílání zpráv ve formátu, který zpracuje jen XAWA -- v~historii konverzací se tedy tyto zprávy neobjeví
+\end{enumerate}
+
+Klasická zpráva zobrazená v~ukázce \ref{navrh_xmpp_message} je mezi ostatními zprávami identifikována díky pou¾itému pøedmìtu zprávy \texttt{xawa\_message}. Zpráva s~takovýmto pøedmìtem je zachycena zásuvným modulem, který implementuje XAWA a nezobrazí se mezi bì¾nými pøijatými zprávami -- je v¹ak ulo¾ena do historie konverzací.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<message xmlns='jabber:client' from='incik@jabbim.cz/jabbim'
+    xml:lang='en' to='johntestovic@jabbim.cz/jabbim' type='chat'
+    id='H_329'>
+    <body>ahoj!</body>
+    <subject>xawa_message</subject>
+</message>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Klasická zpráva s~pøedmìtem \texttt{xawa\_message}}
+  \label{navrh_xmpp_message}
+\end{figure}
+
+Pokud autor aplikace chce, aby pøijaté zprávy byly zpracovávané výhradnì zásuvným modulem, který implementuje XAWA, vyu¾ije druhou metodu zasílání, a sice upravenou zprávu typu IQ (viz ukázka \ref{xawa_iq_message}).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='set'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <xawaMessage>
+            <body>ahoj!</body>
+        </xawaMessage>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva typu \texttt{IQ} obsahující textou zprávu}
+  \label{xawa_iq_message}
+\end{figure}
+
+Aby bylo pravidlo \uv{dotaz -- odpovìï} dodr¾eno i pøi tomto odesílání textových a datových zpráv, ode¹le druhá strana po pøijetí zprávy jednoduchou zprávu zobrazenou v~ukázce \ref{xawa_ack}, která oznamuje, ¾e byla pùvodní zpráva v~poøádku doruèena.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='set'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <ack />
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva potvrzující pøijetí textové zprávy èi dat}
+  \label{xawa_ack}
+\end{figure}
+
+\subsection{Výmìna dat}
+\label{vymenaDat}
+Data budou zasílána jako textový øetìzec reprezentující objekt ve formátu JSON. Na základì zasílání tìchto dat, lze mìnit stav instance aplikace u¾ivatele B a tím reflektovat zmìny, které provedl u¾ivatel A.
+
+Jak ji¾ bylo zmínìno døíve, pùvodnì bylo v~plánu k~zasílání zpráv vyu¾ívat zpráv typu \texttt{message}. Tyto zprávy by se od normálních li¹ily vyplnìným pøedmìtem \texttt{xawa\_data} (viz ukázka \ref{xawa_xmpp_data}). Taková zpráva by byla identifikována, zpracována zásuvným modulem a~nepropadala by mezi ostatní pøijaté zprávy.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<message xmlns='jabber:client' from='incik@jabbim.cz/jabbim'
+    xml:lang='en' to='johntestovic@jabbim.cz/jabbim' type='chat'
+    id='H_332'>
+    <body>{'player':[{'playerid':'player2'}]}</body>
+    <subject>xawa_data</subject>
+</message>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva typu \texttt{message} obsahující data ve formátu JSON}
+  \label{xawa_xmpp_data}
+\end{figure}
+
+Nicménì fakt, ¾e takováto zpráva byla ulo¾ena do historie konverzací (do té se ukládají v¹echny zprávy typu \texttt{message}), vedl k~tomu, ¾e se pro datové zprávy zaèal té¾ pou¾ívat vlastní formát na základì IQ zpráv (viz ukázka \ref{xawa_iq_data}).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='set'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <xawaData>
+            <data>{'player':[{'playerid':'player2'}]}</data>
+        </xawaData>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva typu \texttt{IQ} obsahující data ve formátu JSON}
+  \label{xawa_iq_data}
+\end{figure}
+
+Po pøijetí této zprávy je opìt z~dùvodu dodr¾ení pravidla \uv{dotaz -- odpovìï} odesílateli odeslána zpráva IQ zpráva obsahující \textbf{\texttt{<ack />}}.
+
+\subsection{Zaslání informace o~ukonèení práce s~aplikací}
+Pokud se jeden z~u¾ivatelù rozhodne ukonèit práci s~aplikací, je tøeba o~tom, druhého u¾ivatele informovat. Standardnì tedy pokud u¾ivatel A~zavøe okno aplikace, je u¾ivateli B odeslána zpráva, ¾e opustil relaci (viz ukázka \ref{xawa_session_leave}). Je ale k~dispozici také mo¾nost poslat tuto informaci druhému u¾ivateli manuálnì (napøíklad po kliknutí na tlaèítko).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<iq from='incik@jabbim.cz/jabbim' to='johntestovic@jabbim.cz/jabbim'
+    type='set'>
+    <query xmlns='http://xawa.vaisar.cz'>
+        <session appName='Pokusná aplikace'
+            appUrl='http://xawa.vaisar.cz/apps/pokusna'>
+            <leave />
+        </session>
+    </query>
+</iq>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zpráva oznamující ukonèení relace}
+  \label{xawa_session_leave}
+\end{figure}
+
+%==============================================================================
+
+\chapter{Implementace}
+\label{chapImplementace}
+
+V~této kapitole je probírána výsledná implementace aplikaèního rozhraní pro JavaScript. Dále se kapitola vìnuje implementaci navr¾eného aplikaèního programovacího rozhraní v~zásuvném modulu pro komunikátor Jabbim. Proto¾e byla bìhem vývoje vytvoøena i javascriptová knihovna zapouzdøující nìkteré operace, bude bude se jí tato kapitola té¾ vìnovat.
+
+Nìkolik termínù, které budu dále v~textu pou¾ívat:
+\begin{itemize}
+	\item \textbf{prohlí¾eè} -- komponenta, která zaji¹»uje bìh programované aplikace v~rámci zásuvného modulu
+	\item \textbf{programovaná/cílová aplikace} -- webová aplikace vyu¾ívající XAWA bì¾ící v~rámci implementovaného zásuvného modulu
+\end{itemize}
+
+Implementace pro¹la nìkolika fázemi. V~první fázi se poèítalo s~pøístupem, kdy programovaná aplikace v~pravidelných intervalech kontrolovala, zda se nezmìnila hodnota promìnné, do které zásuvný modul ukládal pøijatou zprávu èi data. Tento zpùsob oznaèuji dále v~textu pojemem \emph{staré API} nebo \emph{starý zpùsob}. S~pou¾itím tohoto zpùsobu bylo napsáno nìkolik prvních testovacích aplikací. Ukázalo se v¹ak, ¾e neustálá periodická kontrola stavu je nepraktická z~hlediska nepøehlednosti zdrojového kódu. Proto¾e aplikace periodicky provádìla volání kontrolní funkce, nebyl uspokojivý ani její výkon. Pokud by navíc taková aplikace mìla být provozována napøíklad na mobilním telefonu, tak by pravdìpodobnì díky neustálé aktivitì procesoru brzy vyèerpala baterii zaøízení.
+
+Tento zpùsob implementace byl tedy nahrazen jiným pøístupem\footnote{Nicménì z~dùvodu zpìtné kompatibility s~døíve napsanými aplikacemi je pùvodní zpùsob stále implementován. Jeho pou¾ívání v¹ak není doporuèeno.}. Pøi pøijetí zprávy èi dat zásuvným modulem vyvolána událost, na kterou lze navázat vlastní funkcionalitu -- tedy vytvoøit obsluhu této události\footnote{Oznaèení \uv{událost} je v~tomto kontextu ponìkud nepøesné. Ve skuteènosti toti¾ dochází k~volání funkce, její¾ chování programátor nahradí vlastní funkcí.}.
+
+%Místo toho, aby si programovaná aplikace musela sama neustále aktivnì kontrolovat, zda nebyla pøijatá nìjaká data èi zprávy, je p
+
+%======================================
+
+\section{Události}
+
+Programátor vytváøející v~JavaScriptu aplikaci vyu¾ívající XAWA dostává k~dispozici následující sadu událostí, na které mù¾e navázat vlastní funkcionalitu:
+
+\begin{description}
+	\item[onApplicationReady] -- je vyvolána jakmile je aplikace kompletnì naètena (vèetnì externích javascriptových skriptù a obrázkù). Lze ji vyu¾ít napøíklad k~zaslaní informace o~pøipravenosti aplikace druhé stranì (pro bezproblémové zahájení komunikace).
+	\item[onInvitationAccept] -- je vyvolána u~u¾ivatele A, pokud u¾ivatel A~ode¹le pozvánku do aplikace u¾ivateli B a u¾ivatel B ji \emph{pøijme}
+	\item[onInvitationRefuse] -- je vyvolána u~u¾ivatele A, pokud u¾ivatel A~ode¹le pozvánku do aplikace u¾ivateli B a u¾ivatel B ji \emph{odmítne}
+	\item[onMessageReceived] -- je vyvolána pøi pøijetí textové zprávy, jako parametr jí je pøedán obsah pøijaté zprávy
+	\item[onDataReceived] -- je vyvolána pøi pøijetí datové zprávy, jako parametr jí jsou pøedána pøijatá data
+	\item[onSessionLeave] -- je vyvolána u~u¾ivatele A, pokud u¾ivatel B ukonèí relaci
+\end{description}
+
+Pokud tedy dojde napøíklad k~pøijetí textové zprávy urèené pro námi programovanou aplikace, dojde k~vyvolání události \texttt{onMessageReceived} (resp. se zaène provádìt funkce tého¾ jména), které je jako parametr pøedán obsah pøijaté zprávy. Tuto funkci je tøeba v~aplikaci definovat, jinak dojde k~vyvolání výjimky. K~validnímu chování staèí napøíklad následující zápis v~ukázce \ref{imp_onMessageReceived}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+function onMessageReceived(message) {
+    alert(message);
+}
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Definice chování aplikace pøi události \texttt{onMessageReceived}}
+  \label{imp_onMessageReceived}
+\end{figure}
+
+%======================================
+
+\section{Metody}
+
+Hlavní souèástí API jsou ale metody tøídy \texttt{xawa}, které v~JavaScriptu zprostøedkovávají XMPP funkcionalitu. V¹echny ní¾e uvedené metody lze vyu¾ít v~programované aplikaci javascriptovým voláním \texttt{xawa.názevMetody()}.
+
+\begin{description}
+	\item[init] -- tato funkce nemá ¾ádnou specifickou funkcionalitu, je k~dispozici pro testování, zda je k~dispozici prostøedí podporující XAWA
+	\item[getXawaVersion] -- vrací textový øetìzec, který obsahuje èíslo verze API, které zásuvný modul implementuje
+	\item[getRecipient] -- vrací textový øetezec, který obsahuje JID pøíjemce zpráv (tj. u¾ivatele, se kterým komunikujeme)
+	\item[getSender] -- vrací textový øetìzec, který obsahuje JID odesílatele zpráv (tj. na¹e)
+	\item[sendInvite] -- ode¹le pozvánku do aplikace. Tato metoda pøijímá dva argumenty
+		\begin{itemize}
+			\item JID u¾ivatele, kterému se má pozvánka odeslat
+			\item konfiguraèní objekt aplikace, obsahující informace o~aplikaci (viz oddíl \ref{konfObjekt})
+		\end{itemize}
+	\item[sendMessage] -- ode¹le zprávu u¾ivateli, se kterým je navázána komunikace. Pøijímá jeden parametr, a~sice text zprávy, která se má odeslat
+	\item[sendClassicMessage] -- podobnì jako sendMessage, ale zpráva je odeslána jako klasická XMPP \texttt{message}
+	\item[sendData] -- ode¹le druhému u¾ivateli JSON objekt, který je funkci pøedán jako parametr
+	\item[leave] -- ode¹le druhému u¾ivateli informaci o~ukonèení relace
+\end{description}
+
+Následující funkce jsou k~dispozici z~dùvodu zpìtné kompatibility se star¹í verzí API a jejich pou¾ívání se ji¾ pøili¹ nedoporuèuje.
+
+\begin{description}
+	\item[sendDataInLegacyMode] -- ode¹le druhému u¾ivateli JSON objekt (který pøijímá jako parametr) ve formátu klasické XMPP message -- viz oddíl \ref{vymenaDat}
+	\item[isMessageUnread] -- vrací logickou hodnotu (\emph{true}/\emph{false}), zda ji¾ byla poslední pøijatá textová zpráva aplikací pøeètena
+	\item[isDataUnread] -- vrací logickou hodnotu (\emph{true}/\emph{false}), zda ji¾ byla aplikací pøeètena poslední pøijatá data
+	\item[getMessage] -- vrací obsah poslední pøijaté zprávy
+	\item[getData] -- vrací poslední pøijatá data
+	\item[markMessageAsRead] -- oznaèí pøijatou textou zprávu za pøeètenou
+	\item[markDataAsRead] -- oznaèí pøijatá data za pøeètená
+\end{description}
+
+%V¹echny tyto funkce jsou poté v JavaScriptu pøístupné jako \texttt{xawa.nazevFunkce()}.
+
+Pozn.: Pøi implementaci tohoto API pro jiné komunikátory je z~dùvodu kompatibility tøeba dodr¾et stejné pojmenování metod, jejich rozhraní (vstupní parametry) a chování -- tedy zajistit stejné reakce stejné vstupy (parametry) a výstupy (reakce na zadané parametry).
+
+%======================================
+
+\section{Konfiguraèní objekt}
+\label{konfObjekt}
+V~rámci programované aplikace je nutno definovat objekt, který obsahuje její konfiguraci (viz ukázka \ref{imp_confObjExample}). Jedná se zejména o~název aplikace, URL adresu, na které se daná aplikace nachází, rozmìry okna, v~nìm¾ je aplikace spu¹tìna apod. Tento objekt je poté v~rámci pozvánky do aplikace zaslán druhému u¾ivateli. Na jeho stranì jsou tyto informace vyu¾ity k~tomu, aby se jeho zásuvný modul správnì nastavil (napø. aby u¾ivatel vidìl skuteènì celou hrací plochu).
+
+Povinnými polo¾kami, které tento objekt musí obsahovat jsou:
+\begin{itemize}
+	\item \textbf{appName} -- urèuje jméno aplikace
+	\item \textbf{appUrl} -- urèuje URL, odkud má být aplikace po pøijetí pozvánky naètena a spu¹tìna
+	\item \textbf{\_\_window} -- zapouzdøuje nastavení rozmìrù okna, musí obsahovat dal¹í dva parametry, a sice:
+	\begin{itemize}
+		\item \emph{width} -- urèuje ¹íøku okna aplikace (v~pixelech)
+		\item \emph{height} -- urèuje vý¹ku okna aplikace (v~pixelech)
+	\end{itemize}
+\end{itemize}
+
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+var XAWA_APP_CONFIG = {
+    appName : 'Draughts - Simple board game',
+    appUrl : 'http://localhost/xawa/draughts/'',
+    __window : {
+        width : 900,
+        height : 760
+    }
+};
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøíklad konfiguraèního objektu}
+  \label{imp_confObjExample}
+\end{figure}
+
+Konfiguraèní objekt lze doplnit o~libovolné dal¹í parametry a s~tìmi poté v~aplikaci pracovat.
+
+%======================================
+
+\section{Zásuvný modul pro Jabbim}
+Jabbim je èeský open-source XMPP komunikátor napsaný ve skriptovacím jazyce Python s~vyu¾itím frameworku\footnote{Framework neboli \uv{vývojová platforma} je sada knihoven a nástrojù, které ulehèují vývoj software.} PyQt (Qt\footnote{Qt -- \url{http://qt.nokia.com/products/}} verzi pro programovací jazyk Python). Díky tomu je Jabbim mo¾né spustit na bì¾ných operaèních systémech pro osobní poèítaèe -- bìhem vývoje bylo Jabbim se zásuvným modulem testováno na MS Windows (XP/7), GNU/Linux (Ubuntu 10.10 x64 a Kubuntu 11.04 x86) a na Mac OS X 10.6.7.
+
+\subsection{Implementace zásuvného modulu}
+\label{implementaceModulu}
+
+V~rámci vývoje API bylo nutno zavést vlastní roz¹íøení protokolu XMPP. Toto roz¹íøení je identifikováno pou¾itím jmenného prostoru \texttt{http://xawa.vaisar.cz}. V¹echny zprávy, které jsou identifikovány tímto jmenným prostorem jsou poté zpracovány implementovaným zásuvným modulem.
+
+Dle protokolu XMPP posílá komunikátor bìhem procesu pøihlá¹ování serveru seznam tzv. \emph{capabilities}, tedy seznam toho, s~èím umí komunikátor v~rámci protokolu XMPP pracovat\cite{XMPPCapa}. Do tohoto seznamu je tøeba pøidat vytvoøené roz¹íøení. Díky tomu je pak mo¾né detekovat v~seznamu kontaktù u¾ivatele, kteøí pou¾ívají zásuvný modul implementující XAWA.
+
+Jen u~tìchto u¾ivatelù umo¾níme komunikaci vyu¾ívající toto API. U~u¾ivatelù, jejich¾ komunikátor XAWA podporuje je toti¾ kontextové menu\footnote{nabídka zobrazující se po kliknutí pravým tlaèítkem na kontakt v~seznamu kontaktù} roz¹íøeno o~polo¾ku \uv{Open XAWA window} (viz obrázek \ref{use_open}). Po kliknutí na tuto polo¾ku je otevøeno okno zásuvného modulu a je nastaven \emph{kontext}, v~nìm¾ bude probíhat následující komunikace -- kontakt, na který bylo kliknuto je pro tuto relaci nastaven jako \emph{pøíjemce}.
+
+\vspace*{5pt}
+
+Samotný zásuvný modul je tvoøen dvìma tøídami -- \textbf{Plugin} a \textbf{xawa}. Tøída \texttt{Plugin} je potomkem tøídy \texttt{PluginBase}, která v~Jabbim slou¾í jako základ pro tvorbu zásuvných modulù a~pøedepisuje nìkteré metody, které je tøeba implementovat, aby mohl být zásuvný modul správnì zaveden do programu a~bylo mo¾no s~ním pracovat. Tøída \texttt{Plugin} zaji¹»uje ve¹kerou komunikaci s~jádrem komunikátoru a umo¾òuje vyu¾ívat funkcionalitu, kterou disponuje samotný komunikátor. Díky tomu mù¾e pøijímat a odesílat zprávy, pøístupovat k~informacím o~u¾ivatelích v~seznamu kontaktù, apod. Tato tøída se také stará o~zobrazení okna zásuvného modulu, které obsahuje prohlí¾eè. Ten se stará o~samotné zobrazení a bìh cílových aplikací.
+
+\vspace*{5pt}
+
+Druhou tøídou, která tvoøí zásuvný modul, je tøída \texttt{xawa}. Ta je potomkem tøídy \texttt{QObject} a tvoøí klíèového prostøedníka mezi JavaScriptem a XMPP klientem. Její instance je pomocí metody \texttt{addToJavaScriptWindowObject} pøidána do objektu \texttt{window} cílové aplikace (viz oddíl \ref{addToJS}). Jak ji¾ bylo zmínìno v~návrhu (oddíl \ref{navrh_ui}), pøedev¹ím si v¹ak udr¾uje referenci na instanci tøídy \texttt{Plugin}, která mù¾e pracovat se zbytkem programu Jabbim. Díky tomu je mo¾né v~JavaScriptu pøístupnit ji¾ zmínìnou existující funkcionalitu.
+
+\vspace*{5pt}
+
+Aby byl zásuvný modul schopen zpracovávat zprávy, které jsou pro nìj urèené, je nutno se pøihlásit k~jejich odbìru. To provedeno pomocí metody \texttt{addObserver} (kterou poskytuje knihovna \texttt{twisted}\footnote{Ta v~Jabbim tvoøí jádro XMPP komunikace}), výrazu zapsaného v~jazyce XPath\footnote{XPath -- jazyk urèený pro adresování èástí XML dokumentu} a reference na \emph{obslu¾nou metodu}. Tato metoda je pøi pøijetí urèeného typu zprávy vyvolána a jako paremetr jí je pøedána zachycená XML zpráva.
+
+\begin{figure}[tbh]
+\begin{minipage}{100\%}
+  \begin{verbatim}
+x = '/iq[@type='set']/query[@xmlns='http://xawa.vaisar.cz']/session/invite'
+self.main.client.xmlstream.addObserver(x, self.onInvite, priority = 1)
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Zachycení zprávy obsahující pozvání do aplikace (viz oddíl \ref{zasilaniPozvanek})}
+  \label{imp_xpath}
+\end{figure}
+
+Pokud komunikátor obdr¾í zprávu uvednou v~ukázce \ref{imp_xpath}, zavolá metodu \texttt{self.onInvite} a jako argument jí pøedá pøijatou XML zprávu. Z~této zprávy jsou naèteny informace o~odesílateli a cílové aplikaci. Poté je vyvoláno dialogové okno, pomocí kterého je pøíjemce dotázán, zda chce pozvání pøijmout, èi odmítnout. V~závislosti na jeho rozhodnutí je poté pùvodnímu odesílateli odeslána odpovìï (viz oddíl \ref{zasilaniPozvanek}).
+
+\vspace*{5pt}
+
+Pokud komunikátor zachytí zprávu, která má v~prohlí¾eèi vyvolat událost, je tato vyvolána pomocí metody \texttt{evaluateJavaScript}. Tato metoda je souèástí WebKitu a umo¾òuje v~prohlí¾eèi vykonat javascriptový kód, který jí je pøedán jako parametr.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+mainFrame.evaluateJavaScript('onInvitationAccept(); null')
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázka implementace vyvolání události \texttt{onInvitationAccept}}
+  \label{imp_evalJS}
+\end{figure}
+
+Pøíkaz \texttt{null}, kterým konèí vykonávaný JavaScript, je v~ukázce \ref{imp_evalJS} z~dùvodu výkonu. Metoda \texttt{evaluateJavaScript} toti¾ jako svou návratovou hodnotu vrací výsledek posledního vykonaného pøíkazu. To mù¾e v~nìkterých pøípadech trvat nepøíjemnì dlouho. Pou¾itím \texttt{null} jako posledního pøíkazu je dosa¾eno toho, ¾e je hodnota navrácena okam¾itì.
+
+Pokud není pro takto vyvolanou událost v~cílové aplikaci vytvoøen posluchaè (metoda, která definuje chování pøi této události), je vyvolána výjimka \texttt{ReferenceError}.
+
+%======================================
+
+\section{XAWAlib}
+
+Pøi vytváøení webových aplikací nad XMPP je nutno provádìt stále stejné úkony, napø. zaslat pozvánku a  zareagovat na její pøijetí/odmítnutí. Rozhodl jsem se tedy, ¾e pro tyto úèely vytvoøím jednoduchou javascriptovou knihovnu, která budete tyto bì¾ná operace zastøe¹ovat a zaji¹»ovat tak vy¹¹í úroveò abstrakce. Díky tomu se bude moci programátor více soustøedit na vývoj samotné aplikace a nebude nucen øe¹it "nízkoúrovòové" zále¾itosti typu incializace prostøedí nebo vytvoøení posluchaèe události, kterou vyvolává pøíchozí zpráva.
+
+Kromì tohoto zapouzdøení umo¾òuje XAWAlib také zápis formou, která lépe koresponduje se stylem zápisu kódu vyu¾ívajícího jQuery. To vede nejen k~lep¹í vizuální kompaktnosti kódu, ale zároveò programátor zvyklý s~jQuery pracovat bude rychle schopen pou¾ívat i~XAWAlib.
+
+%Implementace knihovny je inspirována zdrojovým kódem populární knihovny jQuery.
+Hlavní èást knihovny je tvoøena jedinou sebe sama volající anonymní funkcí. Po vykonání této funkce je pùvodní objekt \texttt{window.xawa} nahrazen novým a nelze tedy vyu¾ívat pùvodní volání. Tento pøístup byl zvolen zejména kvùli tomu, aby stejnì pojmenované metody mohly být roz¹íøeny o~nové parametry. Pøi pou¾ití knihovny se navíc znepøístupní metody, které se vyu¾ívaly ve star¹í verzi API a jejich pou¾ívání ji¾ není doporuèeno (tedy napø. \texttt{xawa.isDataUnread}).
+
+\subsection{Funkcionalita}
+
+Následuje popis jednotlivých metod, jejich¾ pou¾ívání XAWAlib umo¾òuje. Povinné parametry metod jsou oznaèeny \textbf{tuènì}, nepovinné \textit{kurzívou}.
+
+\begin{description}
+	\item[\_init] -- Tato metoda za programátora testuje, zda je k~dispozici prostøedí XAWA. Je automaticky volána ihned po inicializaci knihovny a není ji tedy nutno volat explicitnì. Pokud vykonávání této metody sel¾e, je vyvolána výjimka a ukonèí se dal¹í bìh programu -- pokud není k~dispozici XAWA, nemá smysl pokraèovat. Toto chování bylo zavedeno, aby nebylo mo¾né aplikace spou¹tìt z~bì¾ného internetového prohlí¾eèe.
+	\item[sendMessage] -- Tato metoda slou¾í k~zasílání textových zpráv. Zpráva je zaslána \emph{pøíjemci} (u¾ivateli, který je pro aktuální relaci nastaven jako pøíjemce zpráv). \\ Parametry :
+	    \begin{itemize}
+	        \item \textbf{message} -- textový øetìzec reprezentující odesílanou zprávu
+	        \item \textit{options} -- konfiguraèní objekt
+	        \begin{itemize}
+	            \item sendClassicMessage -- pokud má tento atribut hodnotu \texttt{true}, jsou zprávy odesílány jako klasické XMPP zprávy typu \texttt{message} oznaèené pøedmìtem \texttt{xawa\_message}
+	        \end{itemize}
+		\end{itemize}
+		Ukázka pou¾ití: viz ukázka \ref{xawalib_message}
+		
+\begin{figure}[h!]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+xawa.sendMessage('ahoj!', { sendClassicMessage : true } );
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Ukázka odeslání zprávy typu \texttt{message}}
+  \label{xawalib_message}
+\end{figure}
+
+	\item[sendData] -- Tato metoda je urèena pro posílání dat ve formì JSON objektù. Obdobnì jako u~\texttt{sendMessage} je zpráva odeslána \emph{pøíjemci}. \\ Parametry :
+	\begin{itemize}
+	    \item \textbf{json\_data} -- odesílaný JSON objekt
+	    \item \textit{options} -- konfiguraèní objekt
+	    \begin{itemize}
+	        \item sendDataInLegacyMode -- pokud má tento atribut hodnotu \texttt{true}, jsou data odesílána \uv{starou metodou} -- tedy jako klasické XMPP zprávy oznaèené pøedmìtem \texttt{xawa\_data}
+	    \end{itemize}
+	\end{itemize}
+
+	\item[invite] -- Tato metoda slou¾í k~zasílání pozvánek a definici chování pøi jejich pøijetí/odmítnutí. \\ Parametry :
+	\begin{itemize}
+	    \item \textbf{jid} -- JID u¾ivatele, kterému má být pozvánka odeslána
+	    \item \textbf{appConfig} -- konfiguraèní objekt aplikace
+		\item \textit{callbacks} -- konfiguraèní objekt definující funkce, které mají být vyvolány na základì reakce u¾ivatele, jemu¾ je pozvánka zaslána
+		\begin{itemize}
+			\item onAccept -- urèuje funkci vyvolanou pøi pøijetí pozvánky
+			\item onRefuse -- urèuje funkci vyvolanou pøi odmítnutí pozvánky
+		\end{itemize}
+	\end{itemize}
+	Ukázka pou¾ítí: viz ukázka \ref{xawalib_invite}
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+xawa.invite(xawa.recipient, XAWA_APP_CONFIG, {
+    onAccept: function() { alert('Let the game begin!'); },
+    onRefuse: function() {
+        alert(xawa.recipient + 'doesn't want to play.');
+    }
+});
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøíklad pou¾ití metody \texttt{xawa.invite}}
+  \label{xawalib_invite}
+\end{figure}
+
+	\item[leave] -- Metoda, která ode¹le \emph{pøíjemci} informaci o ukonèení relace
+    \item[recipient] -- Tento atribut obsahuje JID aktuálního \emph{pøíjemce}
+    \item[sender] -- Tento atribut obsahuje JID \emph{odesílatele}
+    \item[version] -- Tento atribut obsahuje èíslo aktuální verze implementovaného API
+
+\end{description}
+
+%Z ukázek je té¾ patrný dal¹í prvek, ve kterém byla knihovna inspirována jQuery: základní volání metody lze roz¹íøit o nepovinný parametr obsahující konfiguraèní objekt,  který umo¾òuje mofikovat výchozí chování (napø. definuje funkce, které se mají vykonat v reakci na provádìnou operaci).
+
+\subsection{Zachycování událostí}
+
+Knihovna té¾ roz¹iøuje aplikace o~základní zachycování událostí, které prohlí¾eè vyvolává na základì pøíchozích dat a zpráv. Pokud programátor nenadefinuje vlastní chování pøi zachycení tìchto událostí, zobrazí se pøehledné varování obsahující informaci o~tom, která událost byla zachycena a jaká data byla obdr¾ena.
+Pokud chce programátor na tyto události reagovat, je tøeba toto výchozí chování pøekrýt vlastním. K~tomu postaèuje jednoduchý zápis ve formì uvedené v~ukázce \ref{xawa_callback_registration}.
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+onMessageReceived = function(message) {
+    alert(message);
+};
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøíklad registrace posluchaèe události \texttt{onMessageReceived}}
+  \label{xawa_callback_registration}
+\end{figure}
+
+\subsection{Pou¾ití v~aplikacích}
+
+Knihovnu lze do aplikace pøipojit jako bì¾ný externí javascriptový soubor (viz ukázka \ref{xawalib_include}). Díky tomu, ¾e je implementována jako sebevolající se funkce, je k~dispozici ihned po naètení souboru (viz oddíl \ref{js_vlastnosti}).
+
+\begin{figure}[tbh]
+\hspace{1cm}
+\begin{minipage}{100\%}
+  \begin{verbatim}
+<script src='xawalib.js' type='text/javascript'></script>
+  \end{verbatim}
+\end{minipage}
+  \vspace{-0.2cm}
+  \caption{Pøipojení knihovny do aplikace}
+  \label{xawalib_include}
+\end{figure}
+
+%===============================================================================
+
+\chapter{Testovací aplikace}
+\label{chapTstApps}
+V~této èásti se budu vìnovat aplikacím, které byly bìhem návrhu API a implementace zásuvného modulu pro Jabbim vytvoøeny. Jedná se dvì jednoduché aplikace, na kterých byla testována správná funkènost navr¾eného systému. Pøedev¹ím se ale budu vìnovat plhohodnotné aplikaci, která byla nad API vytvoøena, a sice implementaci deskové hry Dáma.
+
+%======================================
+
+\section{Jednoduché testovací aplikace}
+Tyto aplikace byly vytvoøeny nad prvotní verzí API. Vyu¾ívaly tedy pro zasílání zpráv klasických XMPP zpráv typu \texttt{message} a aktivnì se dotazovaly na pøíchozí data. Bìhem vývoje se ukázalo, ¾e tento pøístup není vhodný ani pro takto jednoduché aplikace. To vedlo k~pøehodnocení implementace a vytvoøení souèasné verze, která pracuje s~událostmi.
+
+\subsection*{Jednoduchý chat}
+Tato aplikace testovala zasílání textových zpráv. Po zadání textu do textového políèka a kliknutí na tlaèítko je zpráva odeslána a zobrazena v~\emph{oknì konverzace}. Pøíchozí zprávy urèené pro aplikaci vyu¾ívající XAWA lze té¾ vidìt v~\emph{oknì konverzace} (viz obrázek \ref{apps_chat}).
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=100mm]{fig/chat_1.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Jednoduchý chat}
+  \label{apps_chat}
+\end{figure}
+
+\newpage
+
+\subsection*{Jednoduchá aplikace posílající data v~JSONu}
+Tato aplikace funguje jako jednoduchá hra pro dva hráèe. Dva hráèi mají k~dispozici barevné ètverce, ka¾dý jeden. Pomocí kurzorových ¹ipek ovládájí svùj ètverec a sna¾í se  dohnat jeden druhého (viz obrázek \ref{apps_game}).
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=100mm]{fig/game_1.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Jednoduchá hra vyu¾ívající zasílání dat ve formátu JSON}
+  \label{apps_game}
+\end{figure}
+
+%======================================
+
+\section{Dáma}
+
+Dáma je jednoduchá desková hra pro dva hráèe. Hraje se na ètvercové desce o~rozmìru 8x8 polí (støídají se svìtlá a tmavá pole). Hráèi posouvají støídavì bílé a èerné kameny po diagonálách tvoøených èernými poli a to pouze vpøed a jen o~jedno pole.
+
+Pokud se nìkterý z~kamenù dostane na nìkteré z~tmavých polí v~poslední øadì u~soupeøe, mìní se v~dámu. Dáma se mù¾e pohybovat o~libovolný poèet polí vpøed i vzad, ale opìt pouze po diagonálách.
+
+Pro detailnìj¹í pravidla viz Pravidla èeské dámy Èeské federace dámy\cite{PravidlaDamy}.
+
+\begin{figure}[tbh]
+	\begin{center}
+		\scalebox{1.0}{\includegraphics[width=120mm]{fig/draughts_1.png}}
+	\end{center}
+  \vspace{-0.2cm}
+  \caption{Prostøedí hry Dáma}
+  \label{apps_draughts}
+\end{figure}
+
+\subsection{Prùbìh hry}
+V~následujícím textu budou pou¾ívány termíny \emph{odesílatel} èi \emph{u¾ivatel A} -- u¾ivatel, který inicioval hru, a \emph{pøíjemce} èi \emph{u¾ivatel B} -- u¾ivatel, který byl do hry pøizván.
+
+\vspace*{5pt}
+
+Pøi spu¹tìní hry, její¾ rozhraní je mo¾no vidìt na obrázku \ref{apps_draughts}, je odesílateli zobrazena nabídka, ve které lze kliknout na jedinou polo¾ku -- \uv{Invite user}. Po kliknutí na toto tlaèítko je odeslána pozvánka do aplikace pøíjemci, v~jeho¾ kontextu byla hra vytvoøena (viz oddíl \ref{implementaceModulu}). Poté aplikace èeká na to, zda pøíjemce pozvání do hry pøijme, èi ne.
+
+Pokud u¾ivatel B pøijme pozvání, nabídka u u¾ivatele A~se zavøe a je zahájena hra. Zaèíná hráè s~bílými kameny (tj. u¾ivatel, který inicioval hru). Hráèi se poté støídají v~tazích kameny -- ka¾dý tah je kontrolován, zda je v~souladu s~pravidly.
+
+Pokud jeden z~hráèù sebere soupeøùv kámen, má automaticky mo¾nost hrát dál -- dle pravidel je mo¾né sebrat jedním vlastním kamenem více kamenù soupeøových. Pokud v¹ak ji¾ nemá kam s~kamenem táhnout, musí kliknout na tlaèítko \uv{skip this turn} (\uv{pøeskoèit/ukonèit tento tah}), nebo» ve høe není implementováno prohledávání stavového prostoru a rozhodování, zda je pro daný kámen k~dispozici dal¹í validní tah. Zde tedy aplikace spoléhá na poctivost úèastníkù hry, kteøí nevyu¾ijí této vlastnosti hry k~tahu jiným kamenem.
+
+Hra je ukonèena buï vítìzstvím jednoho z~hráèù (soupeø ji¾ nemá ¾ádné kameny) nebo tím, ¾e jeden z~úèastníkù hry klikne na tlaèítko \uv{End game}. V~takovém pøípadì je druhému u¾ivateli odesláno oznámení, ¾e vyhrál, proto¾e soupeø ukonèil hru.
+
+\subsection{Implementace}
+Pøi tvorbì aplikace byl kladen dùraz na maximální vyu¾ití javascriptových knihoven jQuery a jQuery UI. Tyto knihovny umo¾òují kromì snadného pøístupu k~prvkùm v~DOM i snadné zaèlenìní funcionality \emph{drag\&drop} (\emph{táhni a pus»}), tedy mo¾nost pøesouvání prvkù v~zobrazované HTML stránce ta¾ením my¹i.
+
+V~maximální míøe té¾ byla vyu¾ita ji¾ zmínìná vlastní knihovna XAWAlib, která zapouzdøuje nìkteré netriviální operace.
+
+\vspace*{5pt}
+
+Hned po naètení aplikace se provede \textbf{registrace posluchaèù událostí} -- tedy definice funkcí, které budou obsluhovat prohlí¾eèem vyvolávané události. Je vyu¾ita událost \texttt{onApplicationReady}, po jejím¾ vyvolání ode¹le aplikace objekt s~informací o~tom, ¾e je pøipravena ke høe.
+
+Dal¹ím definovaným posluchaèem je funkce reagující na událost \texttt{onSessionLeave}, která je vyvolána, pokud jeden z~u¾ivatelù zavøe okno aplikace a tím pøeru¹í relaci. V~takovém pøípadì je u¾ivateli, který v~relaci zùstal oznámeno, ¾e vyhrál.
+
+Nejpodstatnìj¹ím posluchaèem je funkce navázaná na událost \texttt{onDataReceived}. Instance aplikace si toti¾ daty ve formì JSON objektù vymìnují pøíkazy, které mìní jejich stav (pokyn k~zahájení hry, jednotlivé tahy hráèù, apod.). Tato funkce pøijatá data analyzuje a podle jejich obsahu provede potøebný úkon (napø. pøesune odesílatelùv kámen v~oknì pøíjemce).
+
+V~rámci této výmìny dat probíhá ihned po spu¹tìní hry výmìna informací o~tom, kdo bude ve høe oznaèován jako \emph{hráè 1} a kdo \emph{hráè 2} (\emph{hráè 1} je u¾ivatel, který inicioval hru).
+
+Po dokonèení této výmìny je zahájena hra. Po tahu odesílatele je pøíjemci pomocí \texttt{xawa.sendData()} odeslán objekt reprezentující provedený tah, následovaný objektem obsahující pøíkaz pro výmìnu hráèù\footnote{Pøíkaz pro výmìnu hráèù není zaslán pokud odesílatel sebral pøíjemcùv kámen a mù¾e tedy hrát dál.}. Na stranì pøíjemce je poté tah proveden a pøíkaz pro výmìnu hráèù vykonán. Nyní je na tahu pøíjemce.
+
+Hráèi se takto støídají dokud jeden z~nich nevyhraje nebo jeden z~nich neukonèí relaci.
+
+%\begin{verbatim}
+%{ move : [ { 'x': 5, 'y': 5, 'human_x': 'E', 'human_y' : 5 }, { 'x': 5, 'y': 5, 'human_x': 'E', 'human_y' : 5 } }
+%\end{verbatim}
+
+%==============================================================================
+
+\chapter{Závìr}
+\label{chapZaver}
+
+V~rámci práce bylo navr¾eno aplikaèní programovací rozhraní, které umo¾òuje prostøednictvím jazykù XHTML a JavaScript snadnou tvorbu aplikací vyu¾ívajících ke komunikaci protokolu XMPP. Toto rozhraní bylo implementováno v~zásuvném modulu pro internetový komunikátor Jabbim a demonstrováno na netriviální aplikaci -- høe Dáma.
+
+Po¾adavek na pøenositelnost aplikací mezi rùznými IM klienty byl té¾ splnìn. Pokud bude zásuvný modul pro jiný komunikátor implementovat navr¾ené chování a dodr¾í stejné rozhraní metod pro komunikaci, bude v~nìm mo¾no tyto aplikace spou¹tìt.
+
+Pro dal¹í vývoj API je výhodou navr¾eného øe¹ení mo¾nost roz¹íøit èi optimalizovat formát XMPP zpráv bez nutnosti zásahu do ji¾ naprogramovaných aplikací. Staèí upravit pouze zásuvný modul, který implementuje XAWA. Aplikací, které jej vyu¾ívají se tato zmìna nijak nedotkne.
+
+\section{Mo¾nosti roz¹íøení}
+
+Navr¾ené API je velice snadno roz¹iøitelné. Napøíklad díky nativní podpoøe pøehrávání videa a audia ve WebKitu pomocí technologií obsa¾ených HTML5, by bylo mo¾né v~kombinaci s~Jingle\footnote{Jingle -- roz¹íøení protokolu XMPP o~mo¾nost pøímého propojení mezi u¾ivateli (bez úèasti serveru), kterého lze vyu¾ít k~pøenosu obrazu a zvuku} tvoøit aplikace, které by dokázaly pracovat s~obrazem a zvukem.
+
+\subsection{Roz¹íøení modulu pro Jabbim}
+V~souèasné dobì mù¾e být v~Jabbim spu¹tìna pouze jedna instance zásuvného modulu implementujícího XAWA. V¹echny pøijaté zprávy jsou smìrovány právì do této jedné instance. Lze tedy vyu¾ít mo¾nosti hrát najednou s~více hráèi jednu hru (napø. Èlovìèe, nezlob se), nicménì nelze najednou hrát dvì partie Dámy se dvìma rùznými u¾ivateli. V~plánovaných roz¹íøeních pro tento modul (a pro roz¹íøení celého API obecnì) je tedy zavedení mo¾nosti spu¹tìní více oddìlených instancí pro rùzné u¾ivatele.
+
+%\subsection{Zásuvný modul pro Psi}
+%Psi je velice populární open-source XMPP klient, napsaný v C++ a Qt. Jeho vývoj v¹ak ustal -- poslední verze (0.14) vy¹la 3.12.2009\cite{PsiSF}. Práce na modulu, který by implementoval XAWA zapoèaly.
+
+%Zásuvný modul pro Psi\footnote{populární open-source XMPP klient -- \url{http://www.psi-im.org/}} není oproti pùvodnímu plánu souèásti odevzdávané práce, nicménì práce na nìm neustále probíhá. Bohu¾el vzhledem k nekvalitní dokumentaci projektu a zmatenosti nìkterých èástí kódu (vyu¾ívání vícenásobné dìdiènosti) jde vývoj velmi pomalu\footnote{Dokumentace projektu Jabbim také prakticky neexistuje, nicménì zde je alespoò ¾ivá komunita, která v pøípadì potøeby ochotnì poradí}. Vìøím, ¾e v prùbìhu èervna a¾ èervence 2011 bude k dipozici ke sta¾ení na \url{http://xawa.vaisar.cz}.
+
+%=========================================================================

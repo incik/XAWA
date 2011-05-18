@@ -1,10 +1,14 @@
-/*
-*/
+/** 
+ * Created by Tomáš Vaisar, 2011
+ * tomas.vaisar@gmail.com, xvaisa00@stud.fit.vutbr.cz
+ *
+ * Released under GNU/LGPL
+ */
 
 // CONFIGURATION FOR XAWA PLUGIN
 var XAWA_APP_CONFIG = {
 	appName : "Draughts - Simple board game",
-	appUrl : "http://localhost/xawa/draughts/",
+	appUrl : "http://xawa.vaisar.cz/apps/draughts/",
 	__window : {
 		width : 900,
 		height : 760 
@@ -21,7 +25,6 @@ var GLOBALS = {
 	__player1Score : 0,
 	__player2Score : 0,
 	__userIsPlayer : 1, // set by xawa negotiation
-	__opponentIsReady: false
 }
 
 function switchPlayers() {
@@ -285,13 +288,28 @@ function __initGame() {
 	GLOBALS.currentPlayer = 1;
 	
 	// show initial score
-	showScore();	
+	showScore();
+	
+	// show menu
+	showMenu();
+}
+
+function showMenu() {
+	$('#menu').dialog({
+		modal : true,
+		draggable: false,
+		resizable: false,
+		closeOnEscape: false,
+		open: function(event, ui) { $(".ui-dialog-titlebar-close").hide(); }
+	});
+}
+
+function hideMenu() {
+	$('#menu').dialog('close');	
 }
 
 function updateGameInfo() {
 	$('#currentPlayer strong').html(GLOBALS.currentPlayer == 1 ? GLOBALS.__player1 : GLOBALS.__player2);
-	
-	// HERE I SHOULD SEND DATA THROUGH XAWA 
 }
 
 function updateScore(player) {
@@ -317,20 +335,14 @@ function showScore() {
 function __registerEventHandlers() {
 	// function handling incomming messages
 	onApplicationReady = function() {
-		//alert('onAppReady');
 		xawa.sendData({ ready : true });
-	};
-	
-	onMessageReceived = function(message) {
-		alert(message);
 	};
 	
 	onDataReceived = function(data) {
 		var recv = JSON.parse(data);
 		// what did we received?
 		if (recv.ready !== undefined) {
-			//alert('ready recived');
-			$('#startButton').removeAttr('disabled');
+			xawa.sendData({ negotiate: true, player : 2 });
 		} else if (recv.move !== undefined) { // move?
 			var coords = recv.move;
 			var start = coords[0];
@@ -347,12 +359,17 @@ function __registerEventHandlers() {
 		} else if (recv.skipTurn !== undefined) {
 			skipThisTurn();
 		} else if (recv.negotiate !== undefined) {
+			hideMenu();
 			GLOBALS.__userIsPlayer = recv.player;
 			xawa.sendData({ startGame: true });
-			//alert(GLOBALS.__userIsPlayer);
 		} else if (recv.startGame !== undefined) {
-			//alert(GLOBALS.__userIsPlayer);
+			hideMenu();
 		}
+	};
+	
+	onSessionLeave = function() {
+		alert(xawa.recipient + ' has left the game. You win!');
+		window.location = window.location; // the cleanest way to reload app ...
 	};
 }
 
@@ -364,7 +381,7 @@ $(document).ready(function() {
 	
 	$('#inviteButton').click(function() {
 		xawa.invite(xawa.recipient, XAWA_APP_CONFIG, {
-			onAccept: function() { alert('Let the game begin!'); },
+			onAccept: function() { hideMenu(); },
 			onRefuse: function() { alert(xawa.recipient + " doesn't want to play."); }
 		});
 	});
@@ -373,8 +390,11 @@ $(document).ready(function() {
 		xawa.sendData({ negotiate: true, player : 2 });
 	});
 	
-	$('#sendMessageButton').click(function() {
-		xawa.sendMessage("Lorem ipsum dolor sit amet");//, { messageType: 'classic' });
+	$('#closeButton').click(function() {
+		if (confirm('Do you really want to abandon current game?')) {
+			xawa.leave();
+			window.history.back(); // not really clean solution but it works ... 
+		}
 	});
 	
 	$('div.piece').draggable({ revert: "invalid",

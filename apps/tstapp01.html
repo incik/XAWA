@@ -1,8 +1,3 @@
-<!--
-	Simple chatroom created as a simple test of XAWA communication capabilities
-
-	(c) 2010, Tomáš Vaisar
--->
 <html>
 <head>
 	<title>Test App 1</title>
@@ -31,6 +26,8 @@
 	</style>
 
 	<script type="text/javascript">
+		onApplicationReady = function() { };
+	
 		function showError(err) {
 			var errDiv = document.getElementById('errDiv');
 			errDiv.removeAttribute('style');
@@ -58,7 +55,7 @@
 			try {
 				xawa.init();
 				// register function for receiving messages
-				var receiverRef = setInterval('getMessage()',1);
+				setInterval('getMessage()',1);
 				// show recipient's JID
 				document.getElementById('recipientJID').innerHTML = "<strong>" + xawa.getRecipient() + "</strong>";
 				// show sender's JID
@@ -90,7 +87,7 @@
 				var message = document.getElementById('messagebox').value;
 
 				// send message via jabber
-				xawa.sendMessage(message);
+				xawa.sendClassicMessage(message);
 
 				// show sended message in the chatwindow
 				addMessageToChat(xawa.getSender(), message);
@@ -112,7 +109,6 @@
 			}
 			catch(err) {
 				showError(err);
-				clearInterval(receiverRef); // prevents further call of 'getMessage()' method
 			}
 		}
 	</script>

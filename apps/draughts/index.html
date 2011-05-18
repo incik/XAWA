@@ -1,3 +1,10 @@
+<!--
+	Created by Tomáš Vaisar, 2011
+	tomas.vaisar@gmail.com, xvaisa00@stud.fit.vutbr.cz
+
+	Released under GNU/LGPL
+-->
+
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
@@ -9,15 +16,13 @@
 	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/themes/base/jquery-ui.css" type="text/css" media="all" />
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js" type="text/javascript"></script> 
 	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/jquery-ui.min.js" type="text/javascript"></script>
-	<script src="js/draughts.js" type="text/javascript" charset="utf-8"></script>
 	<script src="../xawalib.js" type="text/javascript" charset="utf-8"></script>
-	
+	<script src="js/draughts.js" type="text/javascript" charset="utf-8"></script>	
 </head>
 <body>
-	<div id="menu">
-		<input type="button" id="inviteButton" value="invite" />
-		<input type="button" id="startButton" value="startGame" disabled="disaabled" />
-		<input type="button" id="sendMessageButton" value="sendMessage" />
+	<div id="menu" title="Main menu">
+		<input type="button" id="inviteButton" value="Invite user" />
+		<!-- <input type="button" id="startButton" value="Start game" disabled="disaabled" /> -->
 	</div>
 	<div id="game">
 		<table id="board">
@@ -126,7 +131,10 @@
 				<div id="currentPlayer">It's <strong></strong>'s turn!</div>
 				<div id="yourScore">Your score: <strong></strong></div>
 				<div id="opponentsScore">Opponent's score: <strong></strong></div>
-				<div><input id="skipTurnButton" type="button" value="Skip this turn" disabled /></div>
+				<div>
+					<input id="skipTurnButton" type="button" value="Skip this turn" disabled /><br />
+					<input id="closeButton" type="button" value="End game" />
+				</div>
 			</fieldset>
 			<fieldset id="movementHistory">
 				<legend>Movement history</legend>

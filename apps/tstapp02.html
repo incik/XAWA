@@ -34,11 +34,13 @@
 	</style>
 
 	<script type="text/javascript">
+	
+		onApplicationReady = function() { };
 
 		function sendArrowData(dir) {
 			try {
 				var arrowJSON = {movement:[{direction:dir,offset:16}]};
-				xawa.sendData(JSON.stringify(arrowJSON));
+				xawa.sendDataInLegacyMode(JSON.stringify(arrowJSON));
 			} catch (err) {
 				alert(err);
 			}
@@ -91,7 +93,7 @@
 		// then we should wait for answer
 		function negotiate() {
 			try {
-				xawa.sendData(JSON.stringify({player: [{playerid:'player2'}]}));
+				xawa.sendDataInLegacyMode(JSON.stringify({player: [{playerid:'player2'}]}));
 			} catch (err) {
 				alert(err);
 			}
@@ -100,7 +102,7 @@
 
 		function ack() {
 			try {
-				xawa.sendData(JSON.stringify({ack: [{}]}));
+				xawa.sendDataInLegacyMode(JSON.stringify({ack: [{}]}));
 			} catch (err) {
 				alert(err);
 			}
@@ -129,7 +131,7 @@
 							document.getElementById('opponentsBox').style.top = '0px';
 							// all set, now we send 'negotiation ack' to our opponent
 							try {
-								xawa.sendData(JSON.stringify({negAck: [{}]}));
+								xawa.sendDataInLegacyMode(JSON.stringify({negAck: [{}]}));
 							} catch (err) {
 								alert(err);
 							}

@@ -1,5 +1,23 @@
-Installation
-------------
+XAWA - README
 
-Test apps:
-	- Copy content of 'apps' directory' into /var/www/xawa directory
+Created by Tomáš Vaisar, 2011
+tomas.vaisar@gmail.com, xvaisa00@stud.fit.vutbr.cz
+
+Released under GNU/LGPL (see license.txt)
+===============================================================================
+
+Jabbim plugin instalation:
+	1. Copy content of 'plugins/jabbim' directory into 'path-to-jabbim/plugins/'
+	2. Run Jabbim
+	3. Go to Action -> Options -> Plugins
+	4. In category 'Misc' enable 'XAWA plugin' and hit 'Apply'
+	5. Logout && login and you're ready to go!
+
+Application:
+	- Apps are loaded from http://xawa.vaisar.cz/apps
+	- "Main menu" is located on http://xawa.vaisar.cz/apps/tstapps.html
+	- If you want to run it localy:
+		1. Copy content of 'apps' directory into your 'http://localhost' path
+		2. Edit path-to-jabbim/plugins/xawa/xawa.py
+		3. Find definition of 'loadApp' method
+		4. Change default value of 'appUrl' to where your apps are
